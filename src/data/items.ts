@@ -4,15 +4,14 @@ export const ITEM_POOL: Omit<GameItem, 'id'>[] = [
   // Common items (50% chance)
   { name: 'Wooden Sword', rarity: 'common', value: 5, texture: 'wooden-sword', type: 'sword' },
   { name: 'Stone Pickaxe', rarity: 'common', value: 8, texture: 'stone-pickaxe', type: 'pickaxe' },
-  { name: 'Coal Block', rarity: 'common', value: 3, texture: 'coal', type: 'block' },
+  { name: 'Coal', rarity: 'common', value: 3, texture: 'coal', type: 'block' },
   { name: 'Iron Ingot', rarity: 'common', value: 10, texture: 'iron-ingot', type: 'block' },
-  { name: 'Leather Cap', rarity: 'common', value: 6, texture: 'leather-helmet', type: 'helmet' },
+  { name: 'Iron Helmet', rarity: 'common', value: 6, texture: 'iron-helmet', type: 'helmet' },
   
   // Uncommon items (30% chance)
   { name: 'Iron Sword', rarity: 'uncommon', value: 25, texture: 'iron-sword', type: 'sword' },
   { name: 'Iron Pickaxe', rarity: 'uncommon', value: 30, texture: 'iron-pickaxe', type: 'pickaxe' },
   { name: 'Gold Block', rarity: 'uncommon', value: 40, texture: 'gold-block', type: 'block' },
-  { name: 'Iron Helmet', rarity: 'uncommon', value: 35, texture: 'iron-helmet', type: 'helmet' },
   { name: 'Lapis Lazuli', rarity: 'uncommon', value: 20, texture: 'lapis', type: 'gem' },
   
   // Rare items (12% chance)
@@ -35,11 +34,41 @@ export const ITEM_POOL: Omit<GameItem, 'id'>[] = [
 ];
 
 export const RARITY_COLORS = {
-  common: { bg: 'bg-gray-500', text: 'text-gray-300', glow: '' },
-  uncommon: { bg: 'bg-green-600', text: 'text-green-400', glow: 'shadow-[0_0_20px_rgba(34,197,94,0.5)]' },
-  rare: { bg: 'bg-blue-500', text: 'text-blue-400', glow: 'shadow-[0_0_25px_rgba(59,130,246,0.6)]' },
-  epic: { bg: 'bg-purple-500', text: 'text-purple-400', glow: 'shadow-[0_0_30px_rgba(168,85,247,0.7)]' },
-  legendary: { bg: 'bg-yellow-500', text: 'text-yellow-400', glow: 'shadow-[0_0_40px_rgba(234,179,8,0.8)]' },
+  common: { 
+    bg: 'bg-gray-500', 
+    text: 'text-gray-300', 
+    glow: '',
+    border: 'border-gray-500',
+    className: 'rarity-common'
+  },
+  uncommon: { 
+    bg: 'bg-green-600', 
+    text: 'text-green-400', 
+    glow: 'shadow-[0_0_20px_rgba(34,197,94,0.5)]',
+    border: 'border-green-500',
+    className: 'rarity-uncommon'
+  },
+  rare: { 
+    bg: 'bg-blue-500', 
+    text: 'text-blue-400', 
+    glow: 'shadow-[0_0_25px_rgba(59,130,246,0.6)]',
+    border: 'border-blue-500',
+    className: 'rarity-rare'
+  },
+  epic: { 
+    bg: 'bg-purple-500', 
+    text: 'text-purple-400', 
+    glow: 'shadow-[0_0_30px_rgba(168,85,247,0.7)]',
+    border: 'border-purple-500',
+    className: 'rarity-epic'
+  },
+  legendary: { 
+    bg: 'bg-yellow-500', 
+    text: 'text-yellow-400', 
+    glow: 'shadow-[0_0_40px_rgba(234,179,8,0.8)]',
+    border: 'border-yellow-500',
+    className: 'rarity-legendary'
+  },
 };
 
 export function getRandomItem(): Omit<GameItem, 'id'> {
@@ -64,6 +93,11 @@ export function getRandomItem(): Omit<GameItem, 'id'> {
 export const CASE_TYPES = [
   { id: 'starter', name: 'Starter Crate', price: 50, image: 'chest' },
   { id: 'warrior', name: 'Warrior Crate', price: 150, image: 'ender-chest' },
-  { id: 'diamond', name: 'Diamond Crate', price: 500, image: 'diamond-chest' },
-  { id: 'legendary', name: 'Legendary Crate', price: 1500, image: 'legendary-chest' },
+  { id: 'diamond', name: 'Diamond Crate', price: 500, image: 'diamond' },
+  { id: 'legendary', name: 'Legendary Crate', price: 1500, image: 'nether-star' },
 ];
+
+// Helper to get texture path
+export function getTexturePath(texture: string): string {
+  return `/textures/${texture}.png`;
+}
