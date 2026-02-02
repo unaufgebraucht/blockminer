@@ -1,0 +1,295 @@
+import { ReactNode, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useGame } from '@/context/GameContext';
+import { useAuth } from '@/context/AuthContext';
+import { 
+  Package, 
+  Bomb, 
+  TrendingUp, 
+  Backpack, 
+  Coins, 
+  User, 
+  Wallet, 
+  Gamepad2,
+  LogOut,
+  Menu,
+  X,
+  Pickaxe
+} from 'lucide-react';
+
+type TabType = 'profile' | 'wallet' | 'games';
+
+const gameItems = [
+  { path: '/cases', label: 'CRATES', icon: Package, color: 'text-yellow-400' },
+  { path: '/mines', label: 'MINES', icon: Bomb, color: 'text-red-400' },
+  { path: '/upgrader', label: 'UPGRADER', icon: TrendingUp, color: 'text-green-400' },
+  { path: '/inventory', label: 'INVENTORY', icon: Backpack, color: 'text-cyan-400' },
+];
+
+export function MainLayout({ children }: { children: ReactNode }) {
+  const { balance, profile } = useGame();
+  const { signOut } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<TabType>('games');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/auth');
+  };
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'profile':
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-4"
+          >
+            <div className="flex items-center gap-4 p-4 bg-card border-4 border-border">
+              <div className="w-16 h-16 bg-primary flex items-center justify-center">
+                <User className="w-10 h-10 text-primary-foreground" />
+              </div>
+              <div>
+                <p className="font-pixel text-lg text-foreground">{profile?.username || 'Player'}</p>
+                <p className="font-minecraft text-sm text-muted-foreground">Level 1 Miner</p>
+              </div>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 p-4 bg-destructive/20 border-4 border-destructive text-destructive font-minecraft hover:bg-destructive hover:text-destructive-foreground transition-all"
+            >
+              <LogOut className="w-5 h-5" />
+              LOGOUT
+            </button>
+          </motion.div>
+        );
+      case 'wallet':
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-4"
+          >
+            <div className="p-6 bg-card border-4 border-gold text-center">
+              <Coins className="w-12 h-12 mx-auto mb-3 text-[hsl(var(--gold))]" />
+              <p className="font-minecraft text-sm text-muted-foreground mb-2">YOUR BALANCE</p>
+              <p className="font-pixel text-3xl text-[hsl(var(--gold))]">{balance.toLocaleString()}</p>
+              <p className="font-minecraft text-xs text-muted-foreground mt-2">COINS</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Link
+                to="/inventory"
+                className="p-3 bg-card border-4 border-border text-center font-minecraft text-sm hover:border-primary transition-colors"
+              >
+                SELL ITEMS
+              </Link>
+              <button
+                className="p-3 bg-card border-4 border-border text-center font-minecraft text-sm opacity-50 cursor-not-allowed"
+                disabled
+              >
+                ADD COINS
+              </button>
+            </div>
+          </motion.div>
+        );
+      case 'games':
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-2"
+          >
+            {gameItems.map((item) => {
+              const isActive = location.pathname === item.path;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`flex items-center gap-3 p-4 transition-all border-4 ${
+                    isActive
+                      ? 'bg-primary border-primary text-primary-foreground'
+                      : 'bg-card border-border text-foreground hover:border-primary'
+                  }`}
+                >
+                  <item.icon className={`w-6 h-6 ${isActive ? '' : item.color}`} />
+                  <span className="font-minecraft text-lg">{item.label}</span>
+                </Link>
+              );
+            })}
+          </motion.div>
+        );
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background flex">
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:flex flex-col w-72 bg-card border-r-4 border-border">
+        {/* Logo */}
+        <div className="p-6 border-b-4 border-border">
+          <Link to="/" className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-primary flex items-center justify-center">
+              <Pickaxe className="w-7 h-7 text-primary-foreground" />
+            </div>
+            <span className="font-pixel text-sm text-foreground">MINE<span className="text-primary">CRATE</span></span>
+          </Link>
+        </div>
+
+        {/* Tab Bar */}
+        <div className="flex border-b-4 border-border">
+          {[
+            { id: 'profile' as TabType, icon: User, label: 'Profile' },
+            { id: 'wallet' as TabType, icon: Wallet, label: 'Wallet' },
+            { id: 'games' as TabType, icon: Gamepad2, label: 'Games' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 p-3 flex flex-col items-center gap-1 transition-all ${
+                activeTab === tab.id
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-card text-muted-foreground hover:bg-muted'
+              }`}
+            >
+              <tab.icon className="w-5 h-5" />
+              <span className="font-minecraft text-xs">{tab.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Tab Content */}
+        <div className="flex-1 p-4 overflow-auto">
+          <AnimatePresence mode="wait">
+            {renderTabContent()}
+          </AnimatePresence>
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t-4 border-border">
+          <p className="font-minecraft text-xs text-muted-foreground text-center">
+            PLAY RESPONSIBLY
+          </p>
+        </div>
+      </aside>
+
+      {/* Mobile Header */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card border-b-4 border-border">
+        <div className="flex items-center justify-between p-4">
+          <Link to="/" className="flex items-center gap-2">
+            <div className="w-10 h-10 bg-primary flex items-center justify-center">
+              <Pickaxe className="w-6 h-6 text-primary-foreground" />
+            </div>
+            <span className="font-pixel text-xs text-foreground">MINE<span className="text-primary">CRATE</span></span>
+          </Link>
+
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1 px-3 py-2 bg-background border-2 border-[hsl(var(--gold))]">
+              <Coins className="w-4 h-4 text-[hsl(var(--gold))]" />
+              <span className="font-pixel text-xs text-[hsl(var(--gold))]">{balance.toLocaleString()}</span>
+            </div>
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-2 bg-background border-2 border-border"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Menu */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="bg-card border-t-2 border-border overflow-hidden"
+            >
+              {/* Mobile Tab Bar */}
+              <div className="flex border-b-2 border-border">
+                {[
+                  { id: 'profile' as TabType, icon: User, label: 'Profile' },
+                  { id: 'wallet' as TabType, icon: Wallet, label: 'Wallet' },
+                  { id: 'games' as TabType, icon: Gamepad2, label: 'Games' },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex-1 p-3 flex flex-col items-center gap-1 transition-all ${
+                      activeTab === tab.id
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-card text-muted-foreground'
+                    }`}
+                  >
+                    <tab.icon className="w-5 h-5" />
+                    <span className="font-minecraft text-xs">{tab.label}</span>
+                  </button>
+                ))}
+              </div>
+              
+              {/* Mobile Tab Content */}
+              <div className="p-4">
+                {activeTab === 'games' ? (
+                  <div className="space-y-2">
+                    {gameItems.map((item) => {
+                      const isActive = location.pathname === item.path;
+                      return (
+                        <Link
+                          key={item.path}
+                          to={item.path}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className={`flex items-center gap-3 p-3 transition-all border-4 ${
+                            isActive
+                              ? 'bg-primary border-primary text-primary-foreground'
+                              : 'bg-card border-border text-foreground'
+                          }`}
+                        >
+                          <item.icon className={`w-5 h-5 ${isActive ? '' : item.color}`} />
+                          <span className="font-minecraft">{item.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                ) : activeTab === 'wallet' ? (
+                  <div className="p-4 bg-background border-4 border-[hsl(var(--gold))] text-center">
+                    <Coins className="w-10 h-10 mx-auto mb-2 text-[hsl(var(--gold))]" />
+                    <p className="font-pixel text-2xl text-[hsl(var(--gold))]">{balance.toLocaleString()}</p>
+                    <p className="font-minecraft text-xs text-muted-foreground">COINS</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 p-3 bg-background border-4 border-border">
+                      <div className="w-12 h-12 bg-primary flex items-center justify-center">
+                        <User className="w-8 h-8 text-primary-foreground" />
+                      </div>
+                      <div>
+                        <p className="font-pixel text-sm">{profile?.username || 'Player'}</p>
+                        <p className="font-minecraft text-xs text-muted-foreground">Level 1</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center justify-center gap-2 p-3 bg-destructive/20 border-4 border-destructive text-destructive font-minecraft text-sm"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      LOGOUT
+                    </button>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Main Content */}
+      <main className="flex-1 md:p-8 p-4 pt-24 md:pt-8 overflow-auto">
+        {children}
+      </main>
+    </div>
+  );
+}

@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GameLayout } from '@/components/GameLayout';
+import { MainLayout } from '@/components/MainLayout';
 import { MinecraftTexture } from '@/components/MinecraftTextures';
 import { useGame, GameItem } from '@/context/GameContext';
-import { ITEM_POOL, RARITY_COLORS, getTexturePath } from '@/data/items';
+import { ITEM_POOL, RARITY_COLORS } from '@/data/items';
 import { TrendingUp, Coins, Check, X, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -101,7 +101,7 @@ export default function Upgrader() {
   };
 
   return (
-    <GameLayout>
+    <MainLayout>
       <div className="max-w-5xl mx-auto">
         <motion.h1 
           initial={{ opacity: 0, y: -20 }}
@@ -329,6 +329,6 @@ export default function Upgrader() {
           </motion.div>
         </div>
       </div>
-    </GameLayout>
+    </MainLayout>
   );
 }

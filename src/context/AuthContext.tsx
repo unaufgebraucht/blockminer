@@ -6,7 +6,7 @@ interface AuthState {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (username: string, email: string, password: string) => Promise<{ error: string | null }>;
+  signUp: (username: string, password: string) => Promise<{ error: string | null }>;
   signIn: (username: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 }
@@ -36,18 +36,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (username: string, email: string, password: string): Promise<{ error: string | null }> => {
+  const signUp = async (username: string, password: string): Promise<{ error: string | null }> => {
     try {
+      // Check if username already exists
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('username', username)
+        .maybeSingle();
+
+      if (existingProfile) {
+        return { error: 'Username already taken' };
+      }
+
+      // Create a fake email from username (for Supabase auth)
+      const fakeEmail = `${username.toLowerCase().replace(/[^a-z0-9]/g, '')}@minecrate.local`;
+
       const { error } = await supabase.auth.signUp({
-        email,
+        email: fakeEmail,
         password,
         options: {
           data: { username },
-          emailRedirectTo: window.location.origin,
         },
       });
 
       if (error) {
+        if (error.message.includes('already registered')) {
+          return { error: 'Username already taken' };
+        }
         return { error: error.message };
       }
 
@@ -59,38 +75,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (username: string, password: string): Promise<{ error: string | null }> => {
     try {
-      // First, find the user's email by username
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('user_id')
-        .eq('username', username)
-        .single();
+      // Create the fake email from username
+      const fakeEmail = `${username.toLowerCase().replace(/[^a-z0-9]/g, '')}@minecrate.local`;
 
-      if (profileError || !profile) {
-        return { error: 'Invalid username or password' };
-      }
-
-      // Get user email from auth (we need to use the username as email for login)
-      // Since we store username in metadata, let's try email login with username@placeholder
-      // Actually, we need to store email separately. For now, let's require email for login too.
-      
-      // Simplified: Just try to login with provided credentials
-      // In production, you'd want to lookup email by username first
       const { error } = await supabase.auth.signInWithPassword({
-        email: username.includes('@') ? username : `${username}@user.local`,
+        email: fakeEmail,
         password,
       });
 
       if (error) {
-        // Try with username as email directly
-        const { error: error2 } = await supabase.auth.signInWithPassword({
-          email: username,
-          password,
-        });
-        
-        if (error2) {
-          return { error: 'Invalid username or password' };
-        }
+        return { error: 'Invalid username or password' };
       }
 
       return { error: null };

@@ -1,40 +1,41 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { getTexture } from '@/components/MinecraftTextures';
+import { MainLayout } from '@/components/MainLayout';
 import { Package, Bomb, TrendingUp, Backpack, Pickaxe, Coins, Users, Trophy } from 'lucide-react';
 
 const games = [
   {
     path: '/cases',
     name: 'CRATES',
-    description: 'Open mystery crates to win rare Minecraft items',
+    description: 'Open mystery crates to win rare items',
     icon: Package,
     texture: 'chest',
-    color: '#ffd700',
+    color: 'hsl(var(--gold))',
   },
   {
     path: '/mines',
     name: 'MINES',
-    description: 'Avoid TNT bombs and collect diamonds & emeralds',
+    description: 'Avoid bombs and collect gems',
     icon: Bomb,
     texture: 'tnt',
-    color: '#ef4444',
+    color: 'hsl(var(--destructive))',
   },
   {
     path: '/upgrader',
     name: 'UPGRADER',
-    description: 'Risk your items for a chance at higher value',
+    description: 'Risk items for higher value',
     icon: TrendingUp,
     texture: 'diamond',
-    color: '#4ade80',
+    color: 'hsl(var(--primary))',
   },
   {
     path: '/inventory',
     name: 'INVENTORY',
-    description: 'View and sell your collected items',
+    description: 'View and sell your items',
     icon: Backpack,
     texture: 'emerald',
-    color: '#4AEDD9',
+    color: 'hsl(var(--accent))',
   },
 ];
 
@@ -46,170 +47,159 @@ const stats = [
 
 export default function Index() {
   return (
-    <div className="min-h-screen bg-[#1a1a2e]">
-      {/* Hero */}
-      <header className="relative overflow-hidden">
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0f0f1a] via-transparent to-[#1a1a2e]" />
-        
-        <div className="container mx-auto px-4 py-16 md:py-24 relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center"
-          >
-            {/* Logo */}
-            <div className="flex items-center justify-center gap-3 mb-8">
-              <div className="w-16 h-16 bg-[#4ade80] flex items-center justify-center" style={{ imageRendering: 'pixelated' }}>
-                <Pickaxe className="w-10 h-10 text-black" />
-              </div>
-              <h1 className="font-pixel text-3xl md:text-5xl text-white">
-                MINE<span className="text-[#4ade80]">CRAFT</span>
-              </h1>
+    <MainLayout>
+      <div className="max-w-6xl mx-auto">
+        {/* Welcome Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-12"
+        >
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <div className="w-14 h-14 bg-primary flex items-center justify-center">
+              <Pickaxe className="w-9 h-9 text-primary-foreground" />
             </div>
+            <h1 className="font-pixel text-2xl md:text-4xl text-foreground">
+              MINE<span className="text-primary">CRATE</span>
+            </h1>
+          </div>
+          <p className="font-minecraft text-lg text-muted-foreground max-w-xl mx-auto">
+            Open crates, play mines, upgrade items.
+            <span className="text-[hsl(var(--gold))]"> Win big!</span>
+          </p>
+        </motion.div>
 
-            <p className="font-minecraft text-xl md:text-2xl text-gray-400 mb-8 max-w-2xl mx-auto">
-              Open crates, play mines, upgrade items. <br />
-              <span className="text-[#ffd700]">Win big with Minecraft-themed gambling!</span>
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Link
-                  to="/cases"
-                  className="inline-flex items-center gap-2 px-8 py-4 bg-[#4ade80] border-4 border-[#22c55e] text-black font-pixel text-lg hover:bg-[#22c55e] transition-all"
-                >
-                  <Package className="w-5 h-5" />
-                  OPEN CRATES
-                </Link>
-              </motion.div>
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Link
-                  to="/mines"
-                  className="inline-flex items-center gap-2 px-8 py-4 bg-transparent border-4 border-[#ffd700] text-[#ffd700] font-pixel text-lg hover:bg-[#ffd700] hover:text-black transition-all"
-                >
-                  <Bomb className="w-5 h-5" />
-                  PLAY MINES
-                </Link>
-              </motion.div>
-            </div>
-          </motion.div>
-        </div>
-      </header>
-
-      {/* Stats */}
-      <section className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-3 gap-4">
+        {/* Stats */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="grid grid-cols-3 gap-4 mb-12"
+        >
           {stats.map((stat, index) => (
-            <motion.div
+            <div
               key={stat.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="bg-[#0f0f1a] border-4 border-[#2a2a4a] p-4 text-center"
+              className="bg-card border-4 border-border p-4 text-center"
             >
-              <stat.icon className="w-6 h-6 mx-auto mb-2 text-[#4ade80]" />
-              <p className="font-pixel text-xl md:text-2xl text-[#ffd700]">{stat.value}</p>
-              <p className="font-minecraft text-gray-500 text-xs md:text-sm">{stat.label}</p>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* Games Grid */}
-      <section className="container mx-auto px-4 py-12">
-        <h2 className="font-pixel text-2xl text-white text-center mb-8">CHOOSE YOUR GAME</h2>
-        
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {games.map((game, index) => (
-            <motion.div
-              key={game.path}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-            >
-              <Link to={game.path}>
-                <motion.div
-                  whileHover={{ scale: 1.03, y: -5 }}
-                  className="bg-[#0f0f1a] border-4 p-6 h-full transition-all"
-                  style={{ borderColor: game.color }}
-                >
-                  <div className="w-20 h-20 mx-auto mb-4" style={{ imageRendering: 'pixelated' }}>
-                    {getTexture(game.texture)}
-                  </div>
-                  
-                  <h3 className="font-pixel text-lg text-center mb-2" style={{ color: game.color }}>
-                    {game.name}
-                  </h3>
-                  
-                  <p className="font-minecraft text-gray-400 text-center text-sm">
-                    {game.description}
-                  </p>
-                </motion.div>
-              </Link>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* Features */}
-      <section className="container mx-auto px-4 py-12">
-        <div className="grid md:grid-cols-3 gap-6">
-          <div className="bg-[#0f0f1a] border-4 border-[#2a2a4a] p-6 text-center">
-            <div className="w-16 h-16 mx-auto mb-4 bg-[#ffd700]/20 flex items-center justify-center border-4 border-[#ffd700]">
-              <Coins className="w-8 h-8 text-[#ffd700]" />
+              <stat.icon className="w-6 h-6 mx-auto mb-2 text-primary" />
+              <p className="font-pixel text-lg md:text-xl text-[hsl(var(--gold))]">{stat.value}</p>
+              <p className="font-minecraft text-muted-foreground text-xs">{stat.label}</p>
             </div>
-            <h3 className="font-pixel text-sm text-[#ffd700] mb-2">FREE COINS</h3>
-            <p className="font-minecraft text-gray-400">
-              Start with 1000 free coins and play instantly!
+          ))}
+        </motion.div>
+
+        {/* Games Grid */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <h2 className="font-pixel text-xl text-foreground text-center mb-6">CHOOSE YOUR GAME</h2>
+          
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {games.map((game, index) => (
+              <motion.div
+                key={game.path}
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 * index }}
+              >
+                <Link to={game.path}>
+                  <motion.div
+                    whileHover={{ scale: 1.03, y: -5 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="bg-card border-4 p-6 h-full transition-all shadow-[4px_4px_0px_rgba(0,0,0,0.3)]"
+                    style={{ borderColor: game.color }}
+                  >
+                    <div className="w-20 h-20 mx-auto mb-4" style={{ imageRendering: 'pixelated' }}>
+                      {getTexture(game.texture)}
+                    </div>
+                    
+                    <h3 className="font-pixel text-lg text-center mb-2" style={{ color: game.color }}>
+                      {game.name}
+                    </h3>
+                    
+                    <p className="font-minecraft text-muted-foreground text-center text-sm">
+                      {game.description}
+                    </p>
+                  </motion.div>
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Quick Actions */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="mt-12 flex flex-col sm:flex-row gap-4 justify-center"
+        >
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <Link
+              to="/cases"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-primary border-4 border-primary text-primary-foreground font-pixel text-sm shadow-[4px_4px_0px_rgba(0,0,0,0.3)] hover:shadow-[6px_6px_0px_rgba(0,0,0,0.3)] transition-all"
+            >
+              <Package className="w-5 h-5" />
+              OPEN CRATES
+            </Link>
+          </motion.div>
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <Link
+              to="/mines"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-transparent border-4 border-[hsl(var(--gold))] text-[hsl(var(--gold))] font-pixel text-sm shadow-[4px_4px_0px_rgba(0,0,0,0.3)] hover:bg-[hsl(var(--gold))] hover:text-background transition-all"
+            >
+              <Bomb className="w-5 h-5" />
+              PLAY MINES
+            </Link>
+          </motion.div>
+        </motion.div>
+
+        {/* Features */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="mt-16 grid md:grid-cols-3 gap-6"
+        >
+          <div className="bg-card border-4 border-border p-6 text-center">
+            <div className="w-16 h-16 mx-auto mb-4 bg-[hsl(var(--gold))]/20 flex items-center justify-center border-4 border-[hsl(var(--gold))]">
+              <Coins className="w-8 h-8 text-[hsl(var(--gold))]" />
+            </div>
+            <h3 className="font-pixel text-sm text-[hsl(var(--gold))] mb-2">FREE COINS</h3>
+            <p className="font-minecraft text-muted-foreground text-sm">
+              Start with 1000 free coins!
             </p>
           </div>
 
-          <div className="bg-[#0f0f1a] border-4 border-[#2a2a4a] p-6 text-center">
+          <div className="bg-card border-4 border-border p-6 text-center">
             <div className="w-16 h-16 mx-auto mb-4" style={{ imageRendering: 'pixelated' }}>
               {getTexture('diamond-sword')}
             </div>
-            <h3 className="font-pixel text-sm text-[#4AEDD9] mb-2">REAL ITEMS</h3>
-            <p className="font-minecraft text-gray-400">
-              Win authentic Minecraft items with real value
+            <h3 className="font-pixel text-sm text-accent mb-2">REAL ITEMS</h3>
+            <p className="font-minecraft text-muted-foreground text-sm">
+              Win items with real value
             </p>
           </div>
 
-          <div className="bg-[#0f0f1a] border-4 border-[#2a2a4a] p-6 text-center">
+          <div className="bg-card border-4 border-border p-6 text-center">
             <div className="w-16 h-16 mx-auto mb-4" style={{ imageRendering: 'pixelated' }}>
               {getTexture('nether-star')}
             </div>
-            <h3 className="font-pixel text-sm text-white mb-2">LEGENDARY DROPS</h3>
-            <p className="font-minecraft text-gray-400">
-              Rare legendary items worth thousands of coins
+            <h3 className="font-pixel text-sm text-foreground mb-2">LEGENDARY DROPS</h3>
+            <p className="font-minecraft text-muted-foreground text-sm">
+              Rare items worth thousands
             </p>
           </div>
-        </div>
-      </section>
+        </motion.div>
 
-      {/* Footer */}
-      <footer className="border-t-4 border-[#2a2a4a] mt-12">
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-[#4ade80] flex items-center justify-center">
-                <Pickaxe className="w-5 h-5 text-black" />
-              </div>
-              <span className="font-pixel text-sm text-white">
-                MINE<span className="text-[#4ade80]">CRAFT</span>
-              </span>
-            </div>
-            
-            <p className="font-minecraft text-gray-500 text-sm text-center">
-              For entertainment purposes only. Play responsibly.
-            </p>
-            
-            <p className="font-minecraft text-gray-600 text-xs">
-              Not affiliated with Mojang or Microsoft
-            </p>
-          </div>
+        {/* Footer */}
+        <div className="mt-16 text-center font-minecraft text-muted-foreground text-xs">
+          <p>For entertainment purposes only. Play responsibly.</p>
+          <p className="mt-1 text-muted-foreground/50">Not affiliated with Mojang or Microsoft</p>
         </div>
-      </footer>
-    </div>
+      </div>
+    </MainLayout>
   );
 }

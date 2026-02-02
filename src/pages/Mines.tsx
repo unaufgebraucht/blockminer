@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GameLayout } from '@/components/GameLayout';
+import { MainLayout } from '@/components/MainLayout';
 import { getTexture } from '@/components/MinecraftTextures';
 import { useGame } from '@/context/GameContext';
-import { Bomb, Coins, RotateCcw } from 'lucide-react';
+import { Bomb, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 
 const GRID_SIZE = 5;
@@ -33,7 +33,7 @@ export default function Mines() {
     for (let i = 0; i < revealed; i++) {
       multiplier *= safeSpots / (safeSpots - i);
     }
-    return Math.min(multiplier * 0.97, 1000); // 3% house edge, max 1000x
+    return Math.min(multiplier * 0.97, 1000);
   }, []);
 
   const startGame = () => {
@@ -46,7 +46,6 @@ export default function Mines() {
       return;
     }
 
-    // Generate grid
     const newGrid: Tile[][] = Array(GRID_SIZE).fill(null).map(() =>
       Array(GRID_SIZE).fill(null).map(() => ({
         revealed: false,
@@ -55,7 +54,6 @@ export default function Mines() {
       }))
     );
 
-    // Place mines randomly
     let minesPlaced = 0;
     while (minesPlaced < mineCount) {
       const row = Math.floor(Math.random() * GRID_SIZE);
@@ -82,24 +80,20 @@ export default function Mines() {
     setGrid(newGrid);
 
     if (newGrid[row][col].isMine) {
-      // Hit a mine - game over
       setGameOver(true);
       setIsPlaying(false);
-      // Reveal all mines
       const revealedGrid = newGrid.map(r => r.map(t => ({
         ...t,
         revealed: t.isMine ? true : t.revealed,
       })));
       setGrid(revealedGrid);
-      toast.error("BOOM! You hit a TNT!");
+      toast.error("BOOM! You hit a bomb!");
     } else {
-      // Safe tile
       const newRevealed = revealedCount + 1;
       setRevealedCount(newRevealed);
       const newMultiplier = calculateMultiplier(newRevealed, mineCount);
       setCurrentMultiplier(newMultiplier);
 
-      // Check if all safe tiles revealed
       const safeSpots = GRID_SIZE * GRID_SIZE - mineCount;
       if (newRevealed >= safeSpots) {
         cashOut();
@@ -127,19 +121,19 @@ export default function Mines() {
   };
 
   return (
-    <GameLayout>
+    <MainLayout>
       <div className="max-w-4xl mx-auto">
-        <h1 className="font-pixel text-2xl md:text-3xl text-white mb-8">
-          <Bomb className="inline-block mr-3 text-red-500" />
+        <h1 className="font-pixel text-2xl md:text-3xl text-foreground mb-8 flex items-center gap-3">
+          <Bomb className="text-destructive" />
           MINES
         </h1>
 
         <div className="grid md:grid-cols-[1fr,300px] gap-6">
           {/* Game Grid */}
-          <div className="bg-[#0f0f1a] border-4 border-[#2a2a4a] p-4">
+          <div className="bg-card border-4 border-border p-4">
             {!isPlaying && grid.length === 0 ? (
               <div className="aspect-square flex items-center justify-center">
-                <p className="font-minecraft text-gray-400 text-center">
+                <p className="font-minecraft text-muted-foreground text-center">
                   Set your bet and mines,<br />then click START
                 </p>
               </div>
@@ -156,9 +150,9 @@ export default function Mines() {
                       className={`aspect-square border-4 transition-all ${
                         tile.revealed
                           ? tile.isMine
-                            ? 'border-red-500 bg-red-900/50'
-                            : 'border-[#4ade80] bg-[#4ade80]/20'
-                          : 'border-[#2a2a4a] bg-[#1a1a2e] hover:border-[#4ade80]/50 cursor-pointer'
+                            ? 'border-destructive bg-destructive/20'
+                            : 'border-primary bg-primary/20'
+                          : 'border-border bg-muted hover:border-primary/50 cursor-pointer'
                       }`}
                     >
                       <AnimatePresence>
@@ -184,24 +178,23 @@ export default function Mines() {
               </div>
             )}
 
-            {/* Game Over / Win overlay */}
             {(gameOver || won) && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="mt-4 text-center"
               >
-                <p className={`font-pixel text-2xl ${gameOver ? 'text-red-500' : 'text-[#4ade80]'}`}>
+                <p className={`font-pixel text-2xl ${gameOver ? 'text-destructive' : 'text-primary'}`}>
                   {gameOver ? 'GAME OVER!' : 'YOU WON!'}
                 </p>
                 {won && (
-                  <p className="font-minecraft text-[#ffd700] mt-2">
+                  <p className="font-minecraft text-[hsl(var(--gold))] mt-2">
                     +{Math.floor(betAmount * currentMultiplier)} coins
                   </p>
                 )}
                 <button
                   onClick={resetGame}
-                  className="mt-4 px-6 py-2 bg-[#2a2a4a] border-4 border-[#4ade80] text-white font-minecraft hover:bg-[#4ade80] hover:text-black transition-all"
+                  className="mt-4 px-6 py-2 bg-muted border-4 border-primary text-foreground font-minecraft hover:bg-primary hover:text-primary-foreground transition-all"
                 >
                   <RotateCcw className="inline-block mr-2 w-4 h-4" />
                   PLAY AGAIN
@@ -211,10 +204,9 @@ export default function Mines() {
           </div>
 
           {/* Controls */}
-          <div className="bg-[#0f0f1a] border-4 border-[#2a2a4a] p-4 space-y-6">
-            {/* Bet Amount */}
+          <div className="bg-card border-4 border-border p-4 space-y-6">
             <div>
-              <label className="font-minecraft text-gray-400 text-sm block mb-2">BET AMOUNT</label>
+              <label className="font-minecraft text-muted-foreground text-sm block mb-2">BET AMOUNT</label>
               <div className="grid grid-cols-3 gap-2">
                 {BET_OPTIONS.map((amount) => (
                   <button
@@ -223,8 +215,8 @@ export default function Mines() {
                     disabled={isPlaying}
                     className={`p-2 border-4 font-minecraft text-sm transition-all ${
                       betAmount === amount
-                        ? 'border-[#ffd700] bg-[#ffd700]/20 text-[#ffd700]'
-                        : 'border-[#2a2a4a] text-gray-400 hover:border-[#ffd700]/50'
+                        ? 'border-[hsl(var(--gold))] bg-[hsl(var(--gold))]/20 text-[hsl(var(--gold))]'
+                        : 'border-border text-muted-foreground hover:border-[hsl(var(--gold))]/50'
                     } ${isPlaying ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     {amount}
@@ -233,9 +225,8 @@ export default function Mines() {
               </div>
             </div>
 
-            {/* Mine Count */}
             <div>
-              <label className="font-minecraft text-gray-400 text-sm block mb-2">MINES (TNT)</label>
+              <label className="font-minecraft text-muted-foreground text-sm block mb-2">BOMBS</label>
               <div className="grid grid-cols-3 gap-2">
                 {MINE_OPTIONS.map((count) => (
                   <button
@@ -244,8 +235,8 @@ export default function Mines() {
                     disabled={isPlaying}
                     className={`p-2 border-4 font-minecraft text-sm transition-all ${
                       mineCount === count
-                        ? 'border-red-500 bg-red-500/20 text-red-400'
-                        : 'border-[#2a2a4a] text-gray-400 hover:border-red-500/50'
+                        ? 'border-destructive bg-destructive/20 text-destructive'
+                        : 'border-border text-muted-foreground hover:border-destructive/50'
                     } ${isPlaying ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     {count}
@@ -254,18 +245,16 @@ export default function Mines() {
               </div>
             </div>
 
-            {/* Current Multiplier */}
             {isPlaying && (
-              <div className="text-center p-4 border-4 border-[#4ade80] bg-[#4ade80]/10">
-                <p className="font-minecraft text-gray-400 text-sm">MULTIPLIER</p>
-                <p className="font-pixel text-2xl text-[#4ade80]">{currentMultiplier.toFixed(2)}x</p>
-                <p className="font-minecraft text-[#ffd700] text-sm mt-1">
+              <div className="text-center p-4 border-4 border-primary bg-primary/10">
+                <p className="font-minecraft text-muted-foreground text-sm">MULTIPLIER</p>
+                <p className="font-pixel text-2xl text-primary">{currentMultiplier.toFixed(2)}x</p>
+                <p className="font-minecraft text-[hsl(var(--gold))] text-sm mt-1">
                   {Math.floor(betAmount * currentMultiplier)} coins
                 </p>
               </div>
             )}
 
-            {/* Action Buttons */}
             {!isPlaying ? (
               <motion.button
                 onClick={startGame}
@@ -274,8 +263,8 @@ export default function Mines() {
                 whileTap={{ scale: 0.98 }}
                 className={`w-full py-4 border-4 font-pixel text-lg transition-all ${
                   balance >= betAmount
-                    ? 'bg-[#4ade80] border-[#22c55e] text-black hover:bg-[#22c55e]'
-                    : 'bg-gray-600 border-gray-500 text-gray-400 cursor-not-allowed'
+                    ? 'bg-primary border-primary text-primary-foreground hover:shadow-[4px_4px_0px_rgba(0,0,0,0.3)]'
+                    : 'bg-muted border-border text-muted-foreground cursor-not-allowed'
                 }`}
               >
                 START GAME
@@ -288,22 +277,21 @@ export default function Mines() {
                 whileTap={{ scale: 0.98 }}
                 className={`w-full py-4 border-4 font-pixel text-lg transition-all ${
                   revealedCount > 0
-                    ? 'bg-[#ffd700] border-[#b8860b] text-black hover:bg-[#b8860b]'
-                    : 'bg-gray-600 border-gray-500 text-gray-400 cursor-not-allowed'
+                    ? 'bg-[hsl(var(--gold))] border-[hsl(var(--gold))] text-background hover:shadow-[4px_4px_0px_rgba(0,0,0,0.3)]'
+                    : 'bg-muted border-border text-muted-foreground cursor-not-allowed'
                 }`}
               >
                 CASH OUT
               </motion.button>
             )}
 
-            {/* Info */}
-            <div className="text-center font-minecraft text-gray-500 text-xs">
-              <p>Avoid TNT blocks!</p>
+            <div className="text-center font-minecraft text-muted-foreground text-xs">
+              <p>Avoid the bombs!</p>
               <p>Diamonds & Emeralds = Safe</p>
             </div>
           </div>
         </div>
       </div>
-    </GameLayout>
+    </MainLayout>
   );
 }

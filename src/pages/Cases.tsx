@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GameLayout } from '@/components/GameLayout';
+import { MainLayout } from '@/components/MainLayout';
 import { getTexture } from '@/components/MinecraftTextures';
 import { useGame, GameItem } from '@/context/GameContext';
 import { CASE_TYPES, getRandomItem, RARITY_COLORS } from '@/data/items';
@@ -56,10 +56,10 @@ export default function Cases() {
   };
 
   return (
-    <GameLayout>
+    <MainLayout>
       <div className="max-w-6xl mx-auto">
-        <h1 className="font-pixel text-2xl md:text-3xl text-white mb-8">
-          <Package className="inline-block mr-3 text-[#4ade80]" />
+        <h1 className="font-pixel text-2xl md:text-3xl text-foreground mb-8 flex items-center gap-3">
+          <Package className="text-primary" />
           CRATES
         </h1>
 
@@ -73,31 +73,30 @@ export default function Cases() {
               whileTap={{ scale: 0.95 }}
               className={`p-4 border-4 transition-all ${
                 selectedCase.id === caseType.id
-                  ? 'border-[#4ade80] bg-[#4ade80]/10'
-                  : 'border-[#2a2a4a] bg-[#0f0f1a] hover:border-[#4ade80]/50'
+                  ? 'border-primary bg-primary/10'
+                  : 'border-border bg-card hover:border-primary/50'
               }`}
             >
               <div className="w-16 h-16 mx-auto mb-3" style={{ imageRendering: 'pixelated' }}>
                 {getTexture(caseType.image)}
               </div>
-              <p className="font-minecraft text-white text-sm">{caseType.name}</p>
+              <p className="font-minecraft text-foreground text-sm">{caseType.name}</p>
               <div className="flex items-center justify-center gap-1 mt-2">
-                <Coins className="w-4 h-4 text-[#ffd700]" />
-                <span className="font-pixel text-[#ffd700] text-xs">{caseType.price}</span>
+                <Coins className="w-4 h-4 text-[hsl(var(--gold))]" />
+                <span className="font-pixel text-[hsl(var(--gold))] text-xs">{caseType.price}</span>
               </div>
             </motion.button>
           ))}
         </div>
 
         {/* Opening Area */}
-        <div className="bg-[#0f0f1a] border-4 border-[#2a2a4a] p-6">
+        <div className="bg-card border-4 border-border p-6">
           {/* Spinner */}
           {isOpening && spinItems.length > 0 && (
-            <div className="relative h-32 overflow-hidden mb-6 border-4 border-[#ffd700]">
-              {/* Indicator */}
-              <div className="absolute top-0 bottom-0 left-1/2 w-1 bg-[#ffd700] z-10 transform -translate-x-1/2" />
-              <div className="absolute top-0 left-1/2 w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-[#ffd700] transform -translate-x-1/2 z-10" />
-              <div className="absolute bottom-0 left-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-[#ffd700] transform -translate-x-1/2 z-10" />
+            <div className="relative h-32 overflow-hidden mb-6 border-4 border-[hsl(var(--gold))]">
+              <div className="absolute top-0 bottom-0 left-1/2 w-1 bg-[hsl(var(--gold))] z-10 transform -translate-x-1/2" />
+              <div className="absolute top-0 left-1/2 w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-[hsl(var(--gold))] transform -translate-x-1/2 z-10" />
+              <div className="absolute bottom-0 left-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-[hsl(var(--gold))] transform -translate-x-1/2 z-10" />
               
               <motion.div
                 className="flex gap-2 absolute"
@@ -129,7 +128,7 @@ export default function Cases() {
                 className="text-center mb-6"
               >
                 <div className={`inline-block p-8 border-4 ${RARITY_COLORS[wonItem.rarity].glow}`}
-                  style={{ borderColor: wonItem.rarity === 'legendary' ? '#ffd700' : wonItem.rarity === 'epic' ? '#9333ea' : wonItem.rarity === 'rare' ? '#3b82f6' : '#4ade80' }}
+                  style={{ borderColor: wonItem.rarity === 'legendary' ? 'hsl(var(--gold))' : wonItem.rarity === 'epic' ? '#9333ea' : wonItem.rarity === 'rare' ? '#3b82f6' : 'hsl(var(--primary))' }}
                 >
                   <div className="w-24 h-24 mx-auto mb-4" style={{ imageRendering: 'pixelated' }}>
                     {getTexture(wonItem.texture)}
@@ -137,13 +136,13 @@ export default function Cases() {
                   <p className={`font-pixel text-lg ${RARITY_COLORS[wonItem.rarity].text}`}>
                     {wonItem.name}
                   </p>
-                  <p className="font-minecraft text-gray-400 mt-2">
-                    Value: <span className="text-[#ffd700]">{wonItem.value}</span> coins
+                  <p className="font-minecraft text-muted-foreground mt-2">
+                    Value: <span className="text-[hsl(var(--gold))]">{wonItem.value}</span> coins
                   </p>
                 </div>
                 <button
                   onClick={closeResult}
-                  className="mt-4 px-6 py-2 bg-[#2a2a4a] border-4 border-[#4ade80] text-white font-minecraft hover:bg-[#4ade80] hover:text-black transition-all"
+                  className="mt-4 px-6 py-2 bg-muted border-4 border-primary text-foreground font-minecraft hover:bg-primary hover:text-primary-foreground transition-all"
                 >
                   CONTINUE
                 </button>
@@ -157,7 +156,7 @@ export default function Cases() {
               <div className="w-32 h-32 mx-auto mb-6" style={{ imageRendering: 'pixelated' }}>
                 {getTexture(selectedCase.image)}
               </div>
-              <p className="font-pixel text-xl text-white mb-2">{selectedCase.name}</p>
+              <p className="font-pixel text-xl text-foreground mb-2">{selectedCase.name}</p>
               <motion.button
                 onClick={openCase}
                 disabled={balance < selectedCase.price}
@@ -165,8 +164,8 @@ export default function Cases() {
                 whileTap={{ scale: 0.95 }}
                 className={`px-8 py-4 border-4 font-pixel text-lg transition-all ${
                   balance >= selectedCase.price
-                    ? 'bg-[#4ade80] border-[#22c55e] text-black hover:bg-[#22c55e]'
-                    : 'bg-gray-600 border-gray-500 text-gray-400 cursor-not-allowed'
+                    ? 'bg-primary border-primary text-primary-foreground hover:shadow-[4px_4px_0px_rgba(0,0,0,0.3)]'
+                    : 'bg-muted border-border text-muted-foreground cursor-not-allowed'
                 }`}
               >
                 OPEN FOR {selectedCase.price} <Coins className="inline-block w-5 h-5 ml-1" />
@@ -176,11 +175,11 @@ export default function Cases() {
 
           {isOpening && (
             <div className="text-center">
-              <p className="font-pixel text-xl text-[#ffd700] animate-pulse">OPENING...</p>
+              <p className="font-pixel text-xl text-[hsl(var(--gold))] animate-pulse">OPENING...</p>
             </div>
           )}
         </div>
       </div>
-    </GameLayout>
+    </MainLayout>
   );
 }
