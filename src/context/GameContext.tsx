@@ -11,10 +11,16 @@ export interface GameItem {
   type: 'sword' | 'pickaxe' | 'helmet' | 'chestplate' | 'gem' | 'block' | 'tool';
 }
 
+export interface UserProfile {
+  username: string;
+  balance: number;
+}
+
 interface GameState {
   balance: number;
   inventory: GameItem[];
   loading: boolean;
+  profile: UserProfile | null;
   addBalance: (amount: number) => void;
   removeBalance: (amount: number) => boolean;
   addItem: (item: GameItem) => void;
@@ -29,6 +35,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [balance, setBalance] = useState(1000);
   const [inventory, setInventory] = useState<GameItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
 
   // Load user data when authenticated
   useEffect(() => {
@@ -47,15 +54,19 @@ export function GameProvider({ children }: { children: ReactNode }) {
     
     setLoading(true);
     try {
-      // Load profile (balance)
-      const { data: profile } = await supabase
+      // Load profile (balance and username)
+      const { data: profileData } = await supabase
         .from('profiles')
-        .select('balance')
+        .select('balance, username')
         .eq('user_id', user.id)
         .single();
 
-      if (profile) {
-        setBalance(profile.balance);
+      if (profileData) {
+        setBalance(profileData.balance);
+        setProfile({
+          username: profileData.username,
+          balance: profileData.balance,
+        });
       }
 
       // Load inventory
@@ -145,6 +156,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       balance,
       inventory,
       loading,
+      profile,
       addBalance,
       removeBalance,
       addItem,

@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GameLayout } from '@/components/GameLayout';
+import { MainLayout } from '@/components/MainLayout';
 import { getTexture } from '@/components/MinecraftTextures';
 import { useGame, GameItem } from '@/context/GameContext';
 import { RARITY_COLORS } from '@/data/items';
-import { Backpack, Coins, Trash2, ShoppingCart } from 'lucide-react';
+import { Backpack, Coins, ShoppingCart } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Inventory() {
@@ -33,19 +33,19 @@ export default function Inventory() {
   };
 
   return (
-    <GameLayout>
+    <MainLayout>
       <div className="max-w-5xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
-          <h1 className="font-pixel text-2xl md:text-3xl text-white">
-            <Backpack className="inline-block mr-3 text-[#4ade80]" />
+          <h1 className="font-pixel text-2xl md:text-3xl text-foreground flex items-center gap-3">
+            <Backpack className="text-primary" />
             INVENTORY
           </h1>
 
           <div className="flex items-center gap-4">
-            <div className="px-4 py-2 bg-[#0f0f1a] border-4 border-[#ffd700]">
-              <span className="font-minecraft text-gray-400 text-sm">Total Value: </span>
-              <span className="font-pixel text-[#ffd700]">{totalValue}</span>
-              <Coins className="inline-block w-4 h-4 ml-1 text-[#ffd700]" />
+            <div className="px-4 py-2 bg-card border-4 border-[hsl(var(--gold))]">
+              <span className="font-minecraft text-muted-foreground text-sm">Total Value: </span>
+              <span className="font-pixel text-[hsl(var(--gold))]">{totalValue}</span>
+              <Coins className="inline-block w-4 h-4 ml-1 text-[hsl(var(--gold))]" />
             </div>
             
             {inventory.length > 0 && (
@@ -53,7 +53,7 @@ export default function Inventory() {
                 onClick={sellAll}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="px-4 py-2 bg-red-900 border-4 border-red-500 text-red-400 font-minecraft hover:bg-red-500 hover:text-white transition-all"
+                className="px-4 py-2 bg-destructive/20 border-4 border-destructive text-destructive font-minecraft hover:bg-destructive hover:text-destructive-foreground transition-all"
               >
                 SELL ALL
               </motion.button>
@@ -70,9 +70,9 @@ export default function Inventory() {
               className={`px-3 py-1 border-4 font-minecraft text-sm transition-all uppercase ${
                 filter === f
                   ? f === 'all' 
-                    ? 'border-[#4ade80] bg-[#4ade80] text-black'
-                    : `${RARITY_COLORS[f as keyof typeof RARITY_COLORS].bg} border-white/30 text-white`
-                  : 'border-[#2a2a4a] text-gray-400 hover:border-white/30'
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : `${RARITY_COLORS[f as keyof typeof RARITY_COLORS].bg} border-white/30 text-foreground`
+                  : 'border-border text-muted-foreground hover:border-white/30'
               }`}
             >
               {f}
@@ -82,11 +82,11 @@ export default function Inventory() {
 
         <div className="grid md:grid-cols-[1fr,300px] gap-6">
           {/* Items Grid */}
-          <div className="bg-[#0f0f1a] border-4 border-[#2a2a4a] p-4">
+          <div className="bg-card border-4 border-border p-4">
             {filteredInventory.length === 0 ? (
               <div className="py-16 text-center">
-                <Backpack className="w-16 h-16 mx-auto text-gray-600 mb-4" />
-                <p className="font-minecraft text-gray-500">
+                <Backpack className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                <p className="font-minecraft text-muted-foreground">
                   {inventory.length === 0 
                     ? "Your inventory is empty.\nOpen some crates to get items!"
                     : "No items match this filter."
@@ -107,8 +107,8 @@ export default function Inventory() {
                       whileHover={{ scale: 1.1 }}
                       className={`aspect-square border-4 p-1 transition-all ${
                         selectedItem?.id === item.id
-                          ? 'border-[#4ade80]'
-                          : 'border-[#2a2a4a] hover:border-white/30'
+                          ? 'border-primary'
+                          : 'border-border hover:border-white/30'
                       } ${RARITY_COLORS[item.rarity].bg}/30`}
                     >
                       <div className="w-full h-full" style={{ imageRendering: 'pixelated' }}>
@@ -122,8 +122,8 @@ export default function Inventory() {
           </div>
 
           {/* Item Details */}
-          <div className="bg-[#0f0f1a] border-4 border-[#2a2a4a] p-4">
-            <h2 className="font-minecraft text-gray-400 mb-4">ITEM DETAILS</h2>
+          <div className="bg-card border-4 border-border p-4">
+            <h2 className="font-minecraft text-muted-foreground mb-4">ITEM DETAILS</h2>
             
             {selectedItem ? (
               <motion.div
@@ -132,7 +132,7 @@ export default function Inventory() {
                 animate={{ opacity: 1, y: 0 }}
               >
                 <div className={`w-24 h-24 mx-auto mb-4 border-4 p-2 ${RARITY_COLORS[selectedItem.rarity].glow}`}
-                  style={{ borderColor: selectedItem.rarity === 'legendary' ? '#ffd700' : selectedItem.rarity === 'epic' ? '#9333ea' : '#4ade80' }}
+                  style={{ borderColor: selectedItem.rarity === 'legendary' ? 'hsl(var(--gold))' : selectedItem.rarity === 'epic' ? '#9333ea' : 'hsl(var(--primary))' }}
                 >
                   <div className="w-full h-full" style={{ imageRendering: 'pixelated' }}>
                     {getTexture(selectedItem.texture)}
@@ -148,14 +148,14 @@ export default function Inventory() {
                   </p>
                 </div>
 
-                <div className="p-3 border-4 border-[#2a2a4a] bg-[#1a1a2e] mb-4">
+                <div className="p-3 border-4 border-border bg-muted mb-4">
                   <div className="flex justify-between items-center">
-                    <span className="font-minecraft text-gray-400">Type</span>
-                    <span className="font-minecraft text-white capitalize">{selectedItem.type}</span>
+                    <span className="font-minecraft text-muted-foreground">Type</span>
+                    <span className="font-minecraft text-foreground capitalize">{selectedItem.type}</span>
                   </div>
                   <div className="flex justify-between items-center mt-2">
-                    <span className="font-minecraft text-gray-400">Value</span>
-                    <span className="font-minecraft text-[#ffd700] flex items-center gap-1">
+                    <span className="font-minecraft text-muted-foreground">Value</span>
+                    <span className="font-minecraft text-[hsl(var(--gold))] flex items-center gap-1">
                       <Coins className="w-4 h-4" /> {selectedItem.value}
                     </span>
                   </div>
@@ -166,7 +166,7 @@ export default function Inventory() {
                     onClick={() => handleSell(selectedItem)}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className="w-full py-3 bg-[#4ade80] border-4 border-[#22c55e] text-black font-minecraft hover:bg-[#22c55e] transition-all flex items-center justify-center gap-2"
+                    className="w-full py-3 bg-primary border-4 border-primary text-primary-foreground font-minecraft hover:shadow-[4px_4px_0px_rgba(0,0,0,0.3)] transition-all flex items-center justify-center gap-2"
                   >
                     <ShoppingCart className="w-4 h-4" />
                     SELL FOR {selectedItem.value}
@@ -174,7 +174,7 @@ export default function Inventory() {
                 </div>
               </motion.div>
             ) : (
-              <p className="font-minecraft text-gray-500 text-center py-8">
+              <p className="font-minecraft text-muted-foreground text-center py-8">
                 Click an item to view details
               </p>
             )}
@@ -186,16 +186,16 @@ export default function Inventory() {
           {['common', 'uncommon', 'rare', 'epic', 'legendary'].map((rarity) => {
             const count = inventory.filter(i => i.rarity === rarity).length;
             return (
-              <div key={rarity} className="bg-[#0f0f1a] border-4 border-[#2a2a4a] p-3 text-center">
+              <div key={rarity} className="bg-card border-4 border-border p-3 text-center">
                 <p className={`font-pixel text-xl ${RARITY_COLORS[rarity as keyof typeof RARITY_COLORS].text}`}>
                   {count}
                 </p>
-                <p className="font-minecraft text-gray-500 text-xs uppercase">{rarity}</p>
+                <p className="font-minecraft text-muted-foreground text-xs uppercase">{rarity}</p>
               </div>
             );
           })}
         </div>
       </div>
-    </GameLayout>
+    </MainLayout>
   );
 }
