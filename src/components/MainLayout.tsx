@@ -1,8 +1,9 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGame } from '@/context/GameContext';
 import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   Package, 
   Bomb, 
@@ -15,7 +16,8 @@ import {
   LogOut,
   Menu,
   X,
-  Pickaxe
+  Pickaxe,
+  Crown
 } from 'lucide-react';
 
 type TabType = 'profile' | 'wallet' | 'games';
@@ -29,11 +31,25 @@ const gameItems = [
 
 export function MainLayout({ children }: { children: ReactNode }) {
   const { balance, profile } = useGame();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>('games');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from('profiles')
+        .select('is_admin, username')
+        .eq('user_id', user.id)
+        .single();
+      setIsAdmin(data?.is_admin || data?.username?.toLowerCase() === 'albiza');
+    };
+    checkAdmin();
+  }, [user]);
 
   const handleLogout = async () => {
     await signOut();
@@ -120,6 +136,21 @@ export function MainLayout({ children }: { children: ReactNode }) {
                 </Link>
               );
             })}
+            
+            {/* Admin Link */}
+            {isAdmin && (
+              <Link
+                to="/admin"
+                className={`flex items-center gap-3 p-4 transition-all border-4 ${
+                  location.pathname === '/admin'
+                    ? 'bg-[hsl(var(--gold))] border-[hsl(var(--gold))] text-background'
+                    : 'bg-card border-[hsl(var(--gold))]/50 text-[hsl(var(--gold))] hover:border-[hsl(var(--gold))]'
+                }`}
+              >
+                <Crown className="w-6 h-6" />
+                <span className="font-minecraft text-lg">ADMIN</span>
+              </Link>
+            )}
           </motion.div>
         );
     }
@@ -253,6 +284,22 @@ export function MainLayout({ children }: { children: ReactNode }) {
                         </Link>
                       );
                     })}
+                    
+                    {/* Admin Link Mobile */}
+                    {isAdmin && (
+                      <Link
+                        to="/admin"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={`flex items-center gap-3 p-3 transition-all border-4 ${
+                          location.pathname === '/admin'
+                            ? 'bg-[hsl(var(--gold))] border-[hsl(var(--gold))] text-background'
+                            : 'bg-card border-[hsl(var(--gold))]/50 text-[hsl(var(--gold))]'
+                        }`}
+                      >
+                        <Crown className="w-5 h-5" />
+                        <span className="font-minecraft">ADMIN</span>
+                      </Link>
+                    )}
                   </div>
                 ) : activeTab === 'wallet' ? (
                   <div className="p-4 bg-background border-4 border-[hsl(var(--gold))] text-center">

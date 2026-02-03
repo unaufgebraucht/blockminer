@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MainLayout } from '@/components/MainLayout';
 import { getTexture } from '@/components/MinecraftTextures';
 import { useGame, GameItem } from '@/context/GameContext';
-import { CASE_TYPES, getRandomItem, RARITY_COLORS } from '@/data/items';
+import { CASE_TYPES, getRandomItem, RARITY_COLORS, ITEM_POOL } from '@/data/items';
 import { Coins, Package } from 'lucide-react';
 import { toast } from 'sonner';
+import { useSoundEffects } from '@/hooks/useSoundEffects';
 
 export default function Cases() {
   const { balance, removeBalance, addItem } = useGame();
@@ -13,6 +14,78 @@ export default function Cases() {
   const [isOpening, setIsOpening] = useState(false);
   const [wonItem, setWonItem] = useState<GameItem | null>(null);
   const [spinItems, setSpinItems] = useState<GameItem[]>([]);
+  const [spinOffset, setSpinOffset] = useState(0);
+  const animationRef = useRef<number | null>(null);
+  const { playClick, playCrateOpen, playCrateSpin, playWin } = useSoundEffects();
+
+  // Cleanup animation on unmount
+  useEffect(() => {
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, []);
+
+  const getItemsForCase = (caseType: typeof CASE_TYPES[0]): Omit<GameItem, 'id'>[] => {
+    // Filter items based on case tier
+    switch (caseType.id) {
+      case 'starter':
+        return ITEM_POOL.filter(i => ['common', 'uncommon'].includes(i.rarity));
+      case 'warrior':
+        return ITEM_POOL.filter(i => ['common', 'uncommon', 'rare'].includes(i.rarity));
+      case 'diamond':
+        return ITEM_POOL.filter(i => ['uncommon', 'rare', 'epic'].includes(i.rarity));
+      case 'legendary':
+        return ITEM_POOL.filter(i => ['rare', 'epic', 'legendary'].includes(i.rarity));
+      default:
+        return ITEM_POOL;
+    }
+  };
+
+  const getRandomItemForCase = (caseType: typeof CASE_TYPES[0]): Omit<GameItem, 'id'> => {
+    const pool = getItemsForCase(caseType);
+    const rand = Math.random() * 100;
+    
+    let filteredPool: Omit<GameItem, 'id'>[];
+    
+    // Adjust chances based on case type
+    if (caseType.id === 'legendary') {
+      if (rand < 15) {
+        filteredPool = pool.filter(i => i.rarity === 'legendary');
+      } else if (rand < 40) {
+        filteredPool = pool.filter(i => i.rarity === 'epic');
+      } else {
+        filteredPool = pool.filter(i => i.rarity === 'rare');
+      }
+    } else if (caseType.id === 'diamond') {
+      if (rand < 8) {
+        filteredPool = pool.filter(i => i.rarity === 'epic');
+      } else if (rand < 35) {
+        filteredPool = pool.filter(i => i.rarity === 'rare');
+      } else {
+        filteredPool = pool.filter(i => i.rarity === 'uncommon');
+      }
+    } else if (caseType.id === 'warrior') {
+      if (rand < 12) {
+        filteredPool = pool.filter(i => i.rarity === 'rare');
+      } else if (rand < 40) {
+        filteredPool = pool.filter(i => i.rarity === 'uncommon');
+      } else {
+        filteredPool = pool.filter(i => i.rarity === 'common');
+      }
+    } else {
+      // Starter case
+      if (rand < 30) {
+        filteredPool = pool.filter(i => i.rarity === 'uncommon');
+      } else {
+        filteredPool = pool.filter(i => i.rarity === 'common');
+      }
+    }
+    
+    if (filteredPool.length === 0) filteredPool = pool;
+    return filteredPool[Math.floor(Math.random() * filteredPool.length)];
+  };
 
   const openCase = () => {
     if (balance < selectedCase.price) {
@@ -24,33 +97,69 @@ export default function Cases() {
       return;
     }
 
+    playClick();
+    playCrateOpen();
     setIsOpening(true);
     setWonItem(null);
+    setSpinOffset(0);
 
     // Generate spin items
     const items: GameItem[] = [];
-    for (let i = 0; i < 30; i++) {
-      const item = getRandomItem();
+    for (let i = 0; i < 50; i++) {
+      const item = getRandomItemForCase(selectedCase);
       items.push({ ...item, id: `spin-${i}` });
     }
     
-    // The winning item is placed at position 25
-    const winningItem = getRandomItem();
+    // The winning item is placed at a specific position (will be centered after animation)
+    const winningPosition = 35;
+    const winningItem = getRandomItemForCase(selectedCase);
     const finalItem: GameItem = { ...winningItem, id: `win-${Date.now()}` };
-    items[25] = finalItem;
+    items[winningPosition] = finalItem;
     
     setSpinItems(items);
 
-    // After animation, show result
-    setTimeout(() => {
-      setIsOpening(false);
-      setWonItem(finalItem);
-      addItem(finalItem);
-      toast.success(`You won ${finalItem.name}!`);
-    }, 4000);
+    // Animate the spinner
+    const itemWidth = 120; // Width of each item + gap
+    const targetOffset = (winningPosition * itemWidth) - (window.innerWidth / 2) + (itemWidth / 2);
+    const duration = 4000;
+    const startTime = Date.now();
+    let lastTickTime = 0;
+
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Easing function for deceleration
+      const easeOut = 1 - Math.pow(1 - progress, 4);
+      const currentOffset = targetOffset * easeOut;
+      
+      setSpinOffset(currentOffset);
+      
+      // Play tick sound periodically during spin
+      if (elapsed - lastTickTime > 100 && progress < 0.9) {
+        playCrateSpin();
+        lastTickTime = elapsed;
+      }
+
+      if (progress < 1) {
+        animationRef.current = requestAnimationFrame(animate);
+      } else {
+        // Animation complete - show result
+        setTimeout(() => {
+          setIsOpening(false);
+          setWonItem(finalItem);
+          addItem(finalItem);
+          playWin();
+          toast.success(`You won ${finalItem.name}!`);
+        }, 300);
+      }
+    };
+
+    animationRef.current = requestAnimationFrame(animate);
   };
 
   const closeResult = () => {
+    playClick();
     setWonItem(null);
     setSpinItems([]);
   };
@@ -68,7 +177,10 @@ export default function Cases() {
           {CASE_TYPES.map((caseType) => (
             <motion.button
               key={caseType.id}
-              onClick={() => setSelectedCase(caseType)}
+              onClick={() => {
+                playClick();
+                setSelectedCase(caseType);
+              }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className={`p-4 border-4 transition-all ${
@@ -94,15 +206,16 @@ export default function Cases() {
           {/* Spinner */}
           {isOpening && spinItems.length > 0 && (
             <div className="relative h-32 overflow-hidden mb-6 border-4 border-[hsl(var(--gold))]">
+              {/* Center indicator */}
               <div className="absolute top-0 bottom-0 left-1/2 w-1 bg-[hsl(var(--gold))] z-10 transform -translate-x-1/2" />
               <div className="absolute top-0 left-1/2 w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-[hsl(var(--gold))] transform -translate-x-1/2 z-10" />
               <div className="absolute bottom-0 left-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-[hsl(var(--gold))] transform -translate-x-1/2 z-10" />
               
-              <motion.div
-                className="flex gap-2 absolute"
-                initial={{ x: 0 }}
-                animate={{ x: -2600 }}
-                transition={{ duration: 4, ease: [0.1, 0.8, 0.2, 1] }}
+              <div
+                className="flex gap-2 absolute left-1/2"
+                style={{ 
+                  transform: `translateX(-${spinOffset}px)`,
+                }}
               >
                 {spinItems.map((item, index) => (
                   <div
@@ -114,7 +227,7 @@ export default function Cases() {
                     </div>
                   </div>
                 ))}
-              </motion.div>
+              </div>
             </div>
           )}
 

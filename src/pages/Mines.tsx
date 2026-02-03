@@ -5,6 +5,7 @@ import { getTexture } from '@/components/MinecraftTextures';
 import { useGame } from '@/context/GameContext';
 import { Bomb, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
+import { useSoundEffects } from '@/hooks/useSoundEffects';
 
 const GRID_SIZE = 5;
 const BET_OPTIONS = [10, 25, 50, 100, 250, 500];

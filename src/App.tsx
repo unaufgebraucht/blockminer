@@ -11,6 +11,7 @@ import Mines from "./pages/Mines";
 import Upgrader from "./pages/Upgrader";
 import Inventory from "./pages/Inventory";
 import Auth from "./pages/Auth";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -61,6 +62,7 @@ const AppRoutes = () => (
     <Route path="/mines" element={<ProtectedRoute><Mines /></ProtectedRoute>} />
     <Route path="/upgrader" element={<ProtectedRoute><Upgrader /></ProtectedRoute>} />
     <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
+    <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />
   </Routes>
 );

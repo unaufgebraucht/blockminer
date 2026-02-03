@@ -165,6 +165,14 @@
     box-shadow: 0 0 30px hsl(145 60% 45% / 0.5);
   }
 
+  .glow-purple {
+    box-shadow: 0 0 30px hsl(270 70% 50% / 0.5);
+  }
+
+  .glow-red {
+    box-shadow: 0 0 30px hsl(0 70% 50% / 0.5);
+  }
+
   .text-gradient-gold {
     background: linear-gradient(135deg, hsl(45 100% 55%) 0%, hsl(35 100% 45%) 100%);
     -webkit-background-clip: text;
@@ -177,5 +185,66 @@
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+
+  .game-card {
+    @apply bg-card border-4 border-border;
+  }
+
+  .mc-btn {
+    @apply border-4 transition-all;
+  }
+
+  .mc-btn-primary {
+    @apply bg-primary border-primary text-primary-foreground hover:shadow-[4px_4px_0px_rgba(0,0,0,0.3)];
+  }
+
+  /* Win pulse animation */
+  .pulse-win {
+    animation: pulseWin 0.5s ease-in-out 3;
+  }
+
+  @keyframes pulseWin {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+
+  /* Lose shake animation */
+  .shake-lose {
+    animation: shakeLose 0.5s ease-in-out;
+  }
+
+  @keyframes shakeLose {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    75% { transform: translateX(10px); }
+  }
+
+  /* Rarity borders */
+  .rarity-common {
+    @apply border-gray-500;
+  }
+
+  .rarity-uncommon {
+    @apply border-green-500;
+  }
+
+  .rarity-rare {
+    @apply border-blue-500;
+  }
+
+  .rarity-epic {
+    @apply border-purple-500;
+  }
+
+  .rarity-legendary {
+    @apply border-yellow-500;
+  }
+
+  /* Pixel texture */
+  .pixel-texture {
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
   }
 }

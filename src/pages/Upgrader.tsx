@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MainLayout } from '@/components/MainLayout';
 import { MinecraftTexture } from '@/components/MinecraftTextures';
 import { useGame, GameItem } from '@/context/GameContext';
 import { ITEM_POOL, RARITY_COLORS } from '@/data/items';
-import { TrendingUp, Coins, Check, X, RotateCcw } from 'lucide-react';
+import { TrendingUp, Coins, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
+import { useSoundEffects } from '@/hooks/useSoundEffects';
 
 const MULTIPLIERS = [1.5, 2, 3, 5, 10];
 
@@ -16,52 +17,60 @@ export default function Upgrader() {
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [result, setResult] = useState<{ won: boolean; item?: GameItem } | null>(null);
   const [wheelRotation, setWheelRotation] = useState(0);
-  const [indicatorPosition, setIndicatorPosition] = useState(50);
+  const animationRef = useRef<number | null>(null);
+  const { playClick, playUpgradeStart, playUpgradeWin, playUpgradeLose } = useSoundEffects();
 
   const winChance = Math.min(95, Math.floor((1 / targetMultiplier) * 100 * 0.97));
 
-  const upgrade = () => {
+  const upgrade = useCallback(() => {
     if (!selectedItem) {
       toast.error("Select an item to upgrade!");
       return;
     }
 
+    playClick();
+    playUpgradeStart();
     setIsUpgrading(true);
     setResult(null);
 
     // Determine outcome first
     const won = Math.random() * 100 < winChance;
     
-    // Animate the indicator
-    const targetPosition = won 
-      ? Math.random() * winChance // Land in green zone
-      : winChance + Math.random() * (100 - winChance); // Land in red zone
-
-    // Animate with multiple passes
-    let currentPos = indicatorPosition;
-    const duration = 3000;
+    // Calculate target rotation
+    // Green zone: 0 to winChance% of the wheel
+    // Red zone: winChance% to 100% of the wheel
+    const baseRotations = 5; // Number of full rotations before stopping
+    let targetAngle: number;
+    
+    if (won) {
+      // Land in green zone (0 to winChance degrees, mapped to 0-360)
+      const greenZoneDegrees = (winChance / 100) * 360;
+      targetAngle = Math.random() * greenZoneDegrees;
+    } else {
+      // Land in red zone (winChance to 100 degrees, mapped to 0-360)
+      const greenZoneDegrees = (winChance / 100) * 360;
+      targetAngle = greenZoneDegrees + Math.random() * (360 - greenZoneDegrees);
+    }
+    
+    const finalRotation = (baseRotations * 360) + targetAngle;
+    const duration = 4000;
     const startTime = Date.now();
+    const startRotation = wheelRotation;
 
     const animate = () => {
       const elapsed = Date.now() - startTime;
       const progress = Math.min(elapsed / duration, 1);
       
-      // Easing function for deceleration
+      // Cubic ease-out for smooth deceleration
       const easeOut = 1 - Math.pow(1 - progress, 3);
+      const currentRotation = startRotation + (finalRotation * easeOut);
       
-      // Add some extra rotations at the start
-      const extraRotation = progress < 0.5 ? Math.sin(progress * Math.PI * 6) * 20 : 0;
-      const newPos = currentPos + (targetPosition - currentPos + 200) * easeOut + extraRotation;
-      
-      setIndicatorPosition(newPos % 100);
-      setWheelRotation(prev => prev + (1 - progress) * 10);
+      setWheelRotation(currentRotation);
 
       if (progress < 1) {
-        requestAnimationFrame(animate);
+        animationRef.current = requestAnimationFrame(animate);
       } else {
-        setIndicatorPosition(targetPosition);
-        
-        // Show result
+        // Animation complete - show result
         setTimeout(() => {
           removeItem(selectedItem.id);
 
@@ -80,9 +89,11 @@ export default function Upgrader() {
             
             addItem(winningItem);
             setResult({ won: true, item: winningItem });
+            playUpgradeWin();
             toast.success(`Upgraded to ${winningItem.name}!`);
           } else {
             setResult({ won: false });
+            playUpgradeLose();
             toast.error("Upgrade failed! Item lost.");
           }
 
@@ -92,12 +103,12 @@ export default function Upgrader() {
       }
     };
 
-    requestAnimationFrame(animate);
-  };
+    animationRef.current = requestAnimationFrame(animate);
+  }, [selectedItem, targetMultiplier, winChance, wheelRotation, removeItem, addItem, playClick, playUpgradeStart, playUpgradeWin, playUpgradeLose]);
 
   const closeResult = () => {
+    playClick();
     setResult(null);
-    setIndicatorPosition(50);
   };
 
   return (
@@ -130,7 +141,10 @@ export default function Upgrader() {
                 {inventory.map((item) => (
                   <motion.button
                     key={item.id}
-                    onClick={() => setSelectedItem(item)}
+                    onClick={() => {
+                      playClick();
+                      setSelectedItem(item);
+                    }}
                     whileHover={{ scale: 1.05 }}
                     disabled={isUpgrading}
                     className={`aspect-square border-4 p-1 transition-all ${
@@ -174,7 +188,10 @@ export default function Upgrader() {
                 {MULTIPLIERS.map((mult) => (
                   <button
                     key={mult}
-                    onClick={() => setTargetMultiplier(mult)}
+                    onClick={() => {
+                      playClick();
+                      setTargetMultiplier(mult);
+                    }}
                     disabled={isUpgrading}
                     className={`px-4 py-2 border-4 font-pixel transition-all ${
                       targetMultiplier === mult
@@ -188,51 +205,63 @@ export default function Upgrader() {
               </div>
             </div>
 
-            {/* Visual Upgrade Bar */}
-            <div className="mb-6">
-              <div className="relative h-20 bg-secondary border-4 border-border overflow-hidden">
-                {/* Win Zone (Green) */}
-                <div 
-                  className="absolute top-0 left-0 h-full bg-green-600/30 border-r-4 border-green-500"
-                  style={{ width: `${winChance}%` }}
-                >
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Check className="w-8 h-8 text-green-400" />
-                  </div>
-                </div>
-                
-                {/* Lose Zone (Red) */}
-                <div 
-                  className="absolute top-0 right-0 h-full bg-red-600/30"
-                  style={{ width: `${100 - winChance}%` }}
-                >
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <X className="w-8 h-8 text-red-400" />
-                  </div>
+            {/* Circular Wheel */}
+            <div className="flex justify-center mb-6">
+              <div className="relative w-64 h-64">
+                {/* Pointer */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2 z-20">
+                  <div className="w-0 h-0 border-l-[12px] border-r-[12px] border-t-[20px] border-l-transparent border-r-transparent border-t-[hsl(var(--gold))]" />
                 </div>
 
-                {/* Indicator */}
+                {/* Wheel */}
                 <motion.div
-                  className="absolute top-0 w-1 h-full bg-white z-10"
-                  style={{ left: `${indicatorPosition}%` }}
-                  animate={isUpgrading ? { 
-                    boxShadow: ['0 0 10px white', '0 0 30px white', '0 0 10px white']
-                  } : {}}
-                  transition={{ duration: 0.3, repeat: Infinity }}
+                  className="relative w-full h-full rounded-full border-8 border-border overflow-hidden"
+                  style={{
+                    background: `conic-gradient(
+                      hsl(var(--emerald)) 0deg ${(winChance / 100) * 360}deg,
+                      hsl(var(--destructive)) ${(winChance / 100) * 360}deg 360deg
+                    )`,
+                    transform: `rotate(${-wheelRotation}deg)`,
+                  }}
                 >
-                  <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-8 border-l-transparent border-r-transparent border-t-white" />
+                  {/* Win/Lose labels */}
+                  <div 
+                    className="absolute inset-0 flex items-center justify-center"
+                    style={{ transform: `rotate(${(winChance / 100) * 180}deg)` }}
+                  >
+                    <span className="font-pixel text-white text-xl drop-shadow-lg" style={{ transform: 'translateX(-40px)' }}>
+                      WIN
+                    </span>
+                  </div>
+                  <div 
+                    className="absolute inset-0 flex items-center justify-center"
+                    style={{ transform: `rotate(${(winChance / 100) * 360 + ((100 - winChance) / 100) * 180}deg)` }}
+                  >
+                    <span className="font-pixel text-white text-xl drop-shadow-lg" style={{ transform: 'translateX(-40px)' }}>
+                      LOSE
+                    </span>
+                  </div>
                 </motion.div>
 
-                {/* Percentage labels */}
-                <div className="absolute bottom-1 left-2 font-pixel text-xs text-green-400">{winChance}%</div>
-                <div className="absolute bottom-1 right-2 font-pixel text-xs text-red-400">{100 - winChance}%</div>
+                {/* Center circle */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="w-20 h-20 rounded-full bg-card border-4 border-border flex items-center justify-center">
+                    <span className="font-pixel text-lg text-[hsl(var(--gold))]">{targetMultiplier}x</span>
+                  </div>
+                </div>
               </div>
+            </div>
+
+            {/* Chance Display */}
+            <div className="text-center mb-4">
+              <span className="font-minecraft text-muted-foreground">Win Chance: </span>
+              <span className="font-pixel text-lg text-[hsl(var(--emerald))]">{winChance}%</span>
             </div>
 
             {/* Items Display */}
             <div className="flex items-center justify-center gap-6 mb-6">
               {/* Input Item */}
-              <div className={`w-24 h-24 md:w-28 md:h-28 border-4 p-2 ${
+              <div className={`w-20 h-20 md:w-24 md:h-24 border-4 p-2 ${
                 selectedItem ? RARITY_COLORS[selectedItem.rarity].className : 'border-border'
               } bg-secondary`}>
                 {selectedItem ? (
@@ -244,18 +273,19 @@ export default function Upgrader() {
                 )}
               </div>
 
-              {/* Arrow with rotation */}
+              {/* Arrow */}
               <motion.div
-                animate={{ rotate: isUpgrading ? wheelRotation : 0 }}
+                animate={{ rotate: isUpgrading ? 360 : 0 }}
+                transition={{ duration: 1, repeat: isUpgrading ? Infinity : 0, ease: "linear" }}
                 className="text-primary"
               >
-                <RotateCcw className={`w-10 h-10 ${isUpgrading ? 'spin-upgrader' : ''}`} />
+                <RotateCcw className="w-8 h-8" />
               </motion.div>
 
               {/* Output Item */}
-              <div className="w-24 h-24 md:w-28 md:h-28 border-4 border-[hsl(var(--gold))] p-2 bg-secondary glow-gold">
+              <div className="w-20 h-20 md:w-24 md:h-24 border-4 border-[hsl(var(--gold))] p-2 bg-secondary glow-gold">
                 <div className="w-full h-full flex items-center justify-center">
-                  <span className="font-pixel text-xl text-[hsl(var(--gold))]">{targetMultiplier}x</span>
+                  <span className="font-pixel text-lg text-[hsl(var(--gold))]">?</span>
                 </div>
               </div>
             </div>

@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_users: {
+        Row: {
+          created_at: string
+          id: string
+          user_id: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          user_id: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_id?: string
+          username?: string
+        }
+        Relationships: []
+      }
       inventory: {
         Row: {
           created_at: string
@@ -50,33 +71,116 @@ export type Database = {
       profiles: {
         Row: {
           balance: number
+          country: string | null
           created_at: string
           id: string
+          is_admin: boolean
+          total_deposited: number
+          total_withdrawn: number
           updated_at: string
           user_id: string
           username: string
         }
         Insert: {
           balance?: number
+          country?: string | null
           created_at?: string
           id?: string
+          is_admin?: boolean
+          total_deposited?: number
+          total_withdrawn?: number
           updated_at?: string
           user_id: string
           username: string
         }
         Update: {
           balance?: number
+          country?: string | null
           created_at?: string
           id?: string
+          is_admin?: boolean
+          total_deposited?: number
+          total_withdrawn?: number
           updated_at?: string
           user_id?: string
           username?: string
         }
         Relationships: []
       }
+      transactions: {
+        Row: {
+          admin_id: string | null
+          amount: number | null
+          created_at: string
+          id: string
+          item_id: string | null
+          item_name: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          admin_id?: string | null
+          amount?: number | null
+          created_at?: string
+          id?: string
+          item_id?: string | null
+          item_name?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          admin_id?: string | null
+          amount?: number | null
+          created_at?: string
+          id?: string
+          item_id?: string | null
+          item_name?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      admin_players_view: {
+        Row: {
+          balance: number | null
+          country: string | null
+          created_at: string | null
+          id: string | null
+          is_admin: boolean | null
+          item_count: number | null
+          total_deposited: number | null
+          total_withdrawn: number | null
+          user_id: string | null
+          username: string | null
+        }
+        Insert: {
+          balance?: number | null
+          country?: string | null
+          created_at?: string | null
+          id?: string | null
+          is_admin?: boolean | null
+          item_count?: never
+          total_deposited?: number | null
+          total_withdrawn?: number | null
+          user_id?: string | null
+          username?: string | null
+        }
+        Update: {
+          balance?: number | null
+          country?: string | null
+          created_at?: string | null
+          id?: string | null
+          is_admin?: boolean | null
+          item_count?: never
+          total_deposited?: number | null
+          total_withdrawn?: number | null
+          user_id?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
