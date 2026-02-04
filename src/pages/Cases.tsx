@@ -3,10 +3,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MainLayout } from '@/components/MainLayout';
 import { getTexture } from '@/components/MinecraftTextures';
 import { useGame, GameItem } from '@/context/GameContext';
-import { CASE_TYPES, getRandomItem, RARITY_COLORS, ITEM_POOL } from '@/data/items';
-import { Coins, Package } from 'lucide-react';
+import { CASE_TYPES, RARITY_COLORS, ITEM_POOL } from '@/data/items';
+import { Coins, Package, Eye, Percent } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
+
+// Calculate drop chances per case
+const CASE_CHANCES: Record<string, Record<string, number>> = {
+  starter: { common: 70, uncommon: 30, rare: 0, epic: 0, legendary: 0 },
+  warrior: { common: 48, uncommon: 40, rare: 12, epic: 0, legendary: 0 },
+  diamond: { common: 0, uncommon: 57, rare: 35, epic: 8, legendary: 0 },
+  legendary: { common: 0, uncommon: 0, rare: 45, epic: 40, legendary: 15 },
+};
 
 export default function Cases() {
   const { balance, removeBalance, addItem } = useGame();
@@ -15,6 +23,7 @@ export default function Cases() {
   const [wonItem, setWonItem] = useState<GameItem | null>(null);
   const [spinItems, setSpinItems] = useState<GameItem[]>([]);
   const [spinOffset, setSpinOffset] = useState(0);
+  const [showPreview, setShowPreview] = useState(false);
   const animationRef = useRef<number | null>(null);
   const { playClick, playCrateOpen, playCrateSpin, playWin } = useSoundEffects();
 
@@ -28,7 +37,6 @@ export default function Cases() {
   }, []);
 
   const getItemsForCase = (caseType: typeof CASE_TYPES[0]): Omit<GameItem, 'id'>[] => {
-    // Filter items based on case tier
     switch (caseType.id) {
       case 'starter':
         return ITEM_POOL.filter(i => ['common', 'uncommon'].includes(i.rarity));
@@ -45,46 +53,24 @@ export default function Cases() {
 
   const getRandomItemForCase = (caseType: typeof CASE_TYPES[0]): Omit<GameItem, 'id'> => {
     const pool = getItemsForCase(caseType);
+    const chances = CASE_CHANCES[caseType.id];
     const rand = Math.random() * 100;
     
     let filteredPool: Omit<GameItem, 'id'>[];
+    let cumulative = 0;
     
-    // Adjust chances based on case type
-    if (caseType.id === 'legendary') {
-      if (rand < 15) {
-        filteredPool = pool.filter(i => i.rarity === 'legendary');
-      } else if (rand < 40) {
-        filteredPool = pool.filter(i => i.rarity === 'epic');
-      } else {
-        filteredPool = pool.filter(i => i.rarity === 'rare');
-      }
-    } else if (caseType.id === 'diamond') {
-      if (rand < 8) {
-        filteredPool = pool.filter(i => i.rarity === 'epic');
-      } else if (rand < 35) {
-        filteredPool = pool.filter(i => i.rarity === 'rare');
-      } else {
-        filteredPool = pool.filter(i => i.rarity === 'uncommon');
-      }
-    } else if (caseType.id === 'warrior') {
-      if (rand < 12) {
-        filteredPool = pool.filter(i => i.rarity === 'rare');
-      } else if (rand < 40) {
-        filteredPool = pool.filter(i => i.rarity === 'uncommon');
-      } else {
-        filteredPool = pool.filter(i => i.rarity === 'common');
-      }
-    } else {
-      // Starter case
-      if (rand < 30) {
-        filteredPool = pool.filter(i => i.rarity === 'uncommon');
-      } else {
-        filteredPool = pool.filter(i => i.rarity === 'common');
+    for (const rarity of ['legendary', 'epic', 'rare', 'uncommon', 'common'] as const) {
+      cumulative += chances[rarity];
+      if (rand < cumulative) {
+        filteredPool = pool.filter(i => i.rarity === rarity);
+        if (filteredPool.length > 0) {
+          return filteredPool[Math.floor(Math.random() * filteredPool.length)];
+        }
       }
     }
     
-    if (filteredPool.length === 0) filteredPool = pool;
-    return filteredPool[Math.floor(Math.random() * filteredPool.length)];
+    // Fallback
+    return pool[Math.floor(Math.random() * pool.length)];
   };
 
   const openCase = () => {
@@ -103,23 +89,32 @@ export default function Cases() {
     setWonItem(null);
     setSpinOffset(0);
 
-    // Generate spin items
+    // FIRST: Determine the winning item
+    const winningItemTemplate = getRandomItemForCase(selectedCase);
+    const finalItem: GameItem = { 
+      ...winningItemTemplate, 
+      id: `win-${Date.now()}` 
+    };
+
+    // Generate spin items with the winning item at a specific position
     const items: GameItem[] = [];
-    for (let i = 0; i < 50; i++) {
-      const item = getRandomItemForCase(selectedCase);
-      items.push({ ...item, id: `spin-${i}` });
-    }
+    const winningPosition = 35; // Where the winning item will be placed
     
-    // The winning item is placed at a specific position (will be centered after animation)
-    const winningPosition = 35;
-    const winningItem = getRandomItemForCase(selectedCase);
-    const finalItem: GameItem = { ...winningItem, id: `win-${Date.now()}` };
-    items[winningPosition] = finalItem;
+    for (let i = 0; i < 50; i++) {
+      if (i === winningPosition) {
+        // Place the actual winning item here
+        items.push(finalItem);
+      } else {
+        // Random filler items
+        const item = getRandomItemForCase(selectedCase);
+        items.push({ ...item, id: `spin-${i}` });
+      }
+    }
     
     setSpinItems(items);
 
     // Animate the spinner
-    const itemWidth = 120; // Width of each item + gap
+    const itemWidth = 120;
     const targetOffset = (winningPosition * itemWidth) - (window.innerWidth / 2) + (itemWidth / 2);
     const duration = 4000;
     const startTime = Date.now();
@@ -144,7 +139,7 @@ export default function Cases() {
       if (progress < 1) {
         animationRef.current = requestAnimationFrame(animate);
       } else {
-        // Animation complete - show result
+        // Animation complete - award the SAME item that was shown
         setTimeout(() => {
           setIsOpening(false);
           setWonItem(finalItem);
@@ -163,6 +158,9 @@ export default function Cases() {
     setWonItem(null);
     setSpinItems([]);
   };
+
+  const caseItems = getItemsForCase(selectedCase);
+  const chances = CASE_CHANCES[selectedCase.id];
 
   return (
     <MainLayout>
@@ -203,6 +201,73 @@ export default function Cases() {
 
         {/* Opening Area */}
         <div className="bg-card border-4 border-border p-6">
+          {/* Loot Preview Button */}
+          <div className="flex justify-end mb-4">
+            <button
+              onClick={() => setShowPreview(!showPreview)}
+              className="flex items-center gap-2 px-4 py-2 border-4 border-border bg-secondary font-minecraft text-sm hover:border-primary transition-all"
+            >
+              <Eye className="w-4 h-4" />
+              {showPreview ? 'HIDE' : 'VIEW'} LOOT
+            </button>
+          </div>
+
+          {/* Loot Preview Panel */}
+          <AnimatePresence>
+            {showPreview && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mb-6 overflow-hidden"
+              >
+                <div className="p-4 border-4 border-[hsl(var(--gold))]/50 bg-secondary/50">
+                  <h3 className="font-minecraft text-foreground mb-4 flex items-center gap-2">
+                    <Percent className="w-4 h-4 text-[hsl(var(--gold))]" />
+                    POSSIBLE LOOT - {selectedCase.name}
+                  </h3>
+                  
+                  {/* Chances by rarity */}
+                  <div className="grid grid-cols-5 gap-2 mb-4">
+                    {(['common', 'uncommon', 'rare', 'epic', 'legendary'] as const).map(rarity => (
+                      <div 
+                        key={rarity} 
+                        className={`p-2 text-center border-2 ${chances[rarity] > 0 ? RARITY_COLORS[rarity].border : 'border-border opacity-30'}`}
+                      >
+                        <p className={`font-pixel text-lg ${chances[rarity] > 0 ? RARITY_COLORS[rarity].text : 'text-muted-foreground'}`}>
+                          {chances[rarity]}%
+                        </p>
+                        <p className="font-minecraft text-xs text-muted-foreground uppercase">{rarity}</p>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Items grid */}
+                  <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
+                    {caseItems.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className={`aspect-square border-4 p-1 ${RARITY_COLORS[item.rarity].className} bg-secondary relative group`}
+                        title={`${item.name} - ${item.value} coins`}
+                      >
+                        <div className="w-full h-full" style={{ imageRendering: 'pixelated' }}>
+                          {getTexture(item.texture)}
+                        </div>
+                        {/* Tooltip */}
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-20">
+                          <div className="bg-card border-2 border-border p-2 whitespace-nowrap">
+                            <p className={`font-minecraft text-xs ${RARITY_COLORS[item.rarity].text}`}>{item.name}</p>
+                            <p className="font-minecraft text-xs text-[hsl(var(--gold))]">{item.value} coins</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Spinner */}
           {isOpening && spinItems.length > 0 && (
             <div className="relative h-32 overflow-hidden mb-6 border-4 border-[hsl(var(--gold))]">
