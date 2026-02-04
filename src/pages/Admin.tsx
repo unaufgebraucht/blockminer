@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { MainLayout } from '@/components/MainLayout';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,7 +15,9 @@ import {
   Search,
   Gift,
   RefreshCw,
-  Crown
+  Crown,
+  Globe,
+  DollarSign
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -52,7 +54,7 @@ export default function Admin() {
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerData | null>(null);
-  const [giveAmount, setGiveAmount] = useState(100);
+  const [customAmount, setCustomAmount] = useState('');
   const [selectedItem, setSelectedItem] = useState(ITEM_POOL[0]);
 
   useEffect(() => {
@@ -72,12 +74,10 @@ export default function Admin() {
         .eq('user_id', user.id)
         .single();
 
-      // Check if user is admin or is Albiza
       const isAdminUser = data?.is_admin || data?.username?.toLowerCase() === 'albiza';
       setIsAdmin(isAdminUser);
 
       if (isAdminUser) {
-        // If user is Albiza but not marked as admin, update their status
         if (data?.username?.toLowerCase() === 'albiza' && !data?.is_admin) {
           await supabase
             .from('profiles')
@@ -95,7 +95,6 @@ export default function Admin() {
 
   const loadData = async () => {
     try {
-      // Load all players
       const { data: playersData, error } = await supabase
         .from('profiles')
         .select('*')
@@ -103,7 +102,6 @@ export default function Admin() {
 
       if (error) throw error;
 
-      // Get item counts for each player
       const playersWithItems = await Promise.all(
         (playersData || []).map(async (player) => {
           const { count } = await supabase
@@ -120,7 +118,6 @@ export default function Admin() {
 
       setPlayers(playersWithItems);
 
-      // Calculate stats
       const totalBalance = playersWithItems.reduce((sum, p) => sum + (p.balance || 0), 0);
       const totalDeposited = playersWithItems.reduce((sum, p) => sum + (p.total_deposited || 0), 0);
       const totalWithdrawn = playersWithItems.reduce((sum, p) => sum + (p.total_withdrawn || 0), 0);
@@ -137,35 +134,55 @@ export default function Admin() {
     }
   };
 
-  const giveCoins = async (player: PlayerData) => {
-    if (!user) return;
+  const giveCoins = async (player: PlayerData, amount: number) => {
+    if (!user || amount <= 0) {
+      toast.error('Enter a valid amount');
+      return;
+    }
+
+    // Optimistic update
+    const newBalance = player.balance + amount;
+    setPlayers(prev => prev.map(p => 
+      p.id === player.id ? { ...p, balance: newBalance } : p
+    ));
+    setStats(prev => ({
+      ...prev,
+      totalBalance: prev.totalBalance + amount
+    }));
+    if (selectedPlayer?.id === player.id) {
+      setSelectedPlayer({ ...player, balance: newBalance });
+    }
 
     try {
-      const newBalance = player.balance + giveAmount;
-      
       await supabase
         .from('profiles')
         .update({ balance: newBalance })
         .eq('user_id', player.user_id);
 
-      // Log the transaction
       await supabase.from('transactions').insert({
         user_id: player.user_id,
         type: 'admin_grant',
-        amount: giveAmount,
+        amount: amount,
         admin_id: user.id,
       });
 
-      toast.success(`Gave ${giveAmount} coins to ${player.username}`);
-      await loadData();
+      toast.success(`Gave ${amount} coins to ${player.username}`);
+      setCustomAmount('');
     } catch (error) {
       console.error('Error giving coins:', error);
       toast.error('Failed to give coins');
+      // Revert on error
+      await loadData();
     }
   };
 
   const giveItem = async (player: PlayerData) => {
     if (!user) return;
+
+    // Optimistic update
+    setPlayers(prev => prev.map(p => 
+      p.id === player.id ? { ...p, item_count: p.item_count + 1 } : p
+    ));
 
     try {
       const itemId = `admin-${Date.now()}`;
@@ -180,7 +197,6 @@ export default function Admin() {
         item_type: selectedItem.type,
       });
 
-      // Log the transaction
       await supabase.from('transactions').insert({
         user_id: player.user_id,
         type: 'admin_item_grant',
@@ -190,10 +206,10 @@ export default function Admin() {
       });
 
       toast.success(`Gave ${selectedItem.name} to ${player.username}`);
-      await loadData();
     } catch (error) {
       console.error('Error giving item:', error);
       toast.error('Failed to give item');
+      await loadData();
     }
   };
 
@@ -243,9 +259,11 @@ export default function Admin() {
             className="game-card p-4"
           >
             <div className="flex items-center gap-3">
-              <Users className="w-8 h-8 text-primary" />
+              <div className="p-2 bg-primary/20 rounded">
+                <Users className="w-6 h-6 text-primary" />
+              </div>
               <div>
-                <p className="font-minecraft text-muted-foreground text-xs">TOTAL PLAYERS</p>
+                <p className="font-minecraft text-muted-foreground text-xs">PLAYERS</p>
                 <p className="font-pixel text-xl text-foreground">{stats.totalPlayers}</p>
               </div>
             </div>
@@ -258,7 +276,9 @@ export default function Admin() {
             className="game-card p-4"
           >
             <div className="flex items-center gap-3">
-              <Coins className="w-8 h-8 text-[hsl(var(--gold))]" />
+              <div className="p-2 bg-[hsl(var(--gold))]/20 rounded">
+                <DollarSign className="w-6 h-6 text-[hsl(var(--gold))]" />
+              </div>
               <div>
                 <p className="font-minecraft text-muted-foreground text-xs">TOTAL BALANCE</p>
                 <p className="font-pixel text-xl text-[hsl(var(--gold))]">{stats.totalBalance.toLocaleString()}</p>
@@ -273,7 +293,9 @@ export default function Admin() {
             className="game-card p-4"
           >
             <div className="flex items-center gap-3">
-              <TrendingUp className="w-8 h-8 text-[hsl(var(--emerald))]" />
+              <div className="p-2 bg-[hsl(var(--emerald))]/20 rounded">
+                <TrendingUp className="w-6 h-6 text-[hsl(var(--emerald))]" />
+              </div>
               <div>
                 <p className="font-minecraft text-muted-foreground text-xs">DEPOSITED</p>
                 <p className="font-pixel text-xl text-[hsl(var(--emerald))]">{stats.totalDeposited.toLocaleString()}</p>
@@ -288,7 +310,9 @@ export default function Admin() {
             className="game-card p-4"
           >
             <div className="flex items-center gap-3">
-              <TrendingDown className="w-8 h-8 text-destructive" />
+              <div className="p-2 bg-destructive/20 rounded">
+                <TrendingDown className="w-6 h-6 text-destructive" />
+              </div>
               <div>
                 <p className="font-minecraft text-muted-foreground text-xs">WITHDRAWN</p>
                 <p className="font-pixel text-xl text-destructive">{stats.totalWithdrawn.toLocaleString()}</p>
@@ -299,20 +323,20 @@ export default function Admin() {
 
         {/* Players List */}
         <div className="game-card p-4">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
             <h2 className="font-pixel text-lg text-foreground flex items-center gap-2">
               <Users className="w-5 h-5" />
-              PLAYERS
+              PLAYERS ({filteredPlayers.length})
             </h2>
-            <div className="flex gap-2">
-              <div className="relative">
+            <div className="flex gap-2 w-full sm:w-auto">
+              <div className="relative flex-1 sm:flex-none">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search players..."
-                  className="pl-10 pr-4 py-2 bg-secondary border-4 border-border font-minecraft text-foreground focus:border-primary outline-none"
+                  placeholder="Search..."
+                  className="w-full sm:w-48 pl-10 pr-4 py-2 bg-secondary border-4 border-border font-minecraft text-foreground focus:border-primary outline-none text-sm"
                 />
               </div>
               <button
@@ -325,46 +349,50 @@ export default function Admin() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[600px]">
               <thead>
                 <tr className="border-b-4 border-border">
-                  <th className="text-left font-minecraft text-muted-foreground p-2">USERNAME</th>
-                  <th className="text-left font-minecraft text-muted-foreground p-2">BALANCE</th>
-                  <th className="text-left font-minecraft text-muted-foreground p-2">ITEMS</th>
-                  <th className="text-left font-minecraft text-muted-foreground p-2">COUNTRY</th>
-                  <th className="text-left font-minecraft text-muted-foreground p-2">DEPOSITED</th>
-                  <th className="text-left font-minecraft text-muted-foreground p-2">WITHDRAWN</th>
-                  <th className="text-left font-minecraft text-muted-foreground p-2">ACTIONS</th>
+                  <th className="text-left font-minecraft text-muted-foreground p-2 text-xs">USER</th>
+                  <th className="text-left font-minecraft text-muted-foreground p-2 text-xs">BALANCE</th>
+                  <th className="text-left font-minecraft text-muted-foreground p-2 text-xs">ITEMS</th>
+                  <th className="text-left font-minecraft text-muted-foreground p-2 text-xs">
+                    <Globe className="w-3 h-3 inline mr-1" />COUNTRY
+                  </th>
+                  <th className="text-left font-minecraft text-muted-foreground p-2 text-xs">DEP/WITH</th>
+                  <th className="text-left font-minecraft text-muted-foreground p-2 text-xs">ACTION</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredPlayers.map((player) => (
-                  <tr key={player.id} className="border-b border-border/50 hover:bg-secondary/50">
+                  <tr key={player.id} className="border-b border-border/50 hover:bg-secondary/50 transition-colors">
                     <td className="p-2">
                       <div className="flex items-center gap-2">
                         {player.is_admin && <Crown className="w-4 h-4 text-[hsl(var(--gold))]" />}
-                        <span className="font-minecraft text-foreground">{player.username}</span>
+                        <span className="font-minecraft text-foreground text-sm">{player.username}</span>
                       </div>
                     </td>
                     <td className="p-2">
-                      <span className="font-pixel text-[hsl(var(--gold))]">{player.balance.toLocaleString()}</span>
+                      <span className="font-pixel text-[hsl(var(--gold))] text-sm">{player.balance.toLocaleString()}</span>
                     </td>
                     <td className="p-2">
-                      <span className="font-minecraft text-muted-foreground">{player.item_count}</span>
+                      <span className="font-minecraft text-muted-foreground text-sm">{player.item_count}</span>
                     </td>
                     <td className="p-2">
-                      <span className="font-minecraft text-muted-foreground">{player.country || 'Unknown'}</span>
+                      <span className="font-minecraft text-muted-foreground text-sm">{player.country || '—'}</span>
                     </td>
                     <td className="p-2">
-                      <span className="font-minecraft text-[hsl(var(--emerald))]">{(player.total_deposited || 0).toLocaleString()}</span>
-                    </td>
-                    <td className="p-2">
-                      <span className="font-minecraft text-destructive">{(player.total_withdrawn || 0).toLocaleString()}</span>
+                      <span className="font-minecraft text-[hsl(var(--emerald))] text-xs">+{(player.total_deposited || 0).toLocaleString()}</span>
+                      <span className="text-muted-foreground mx-1">/</span>
+                      <span className="font-minecraft text-destructive text-xs">-{(player.total_withdrawn || 0).toLocaleString()}</span>
                     </td>
                     <td className="p-2">
                       <button
                         onClick={() => setSelectedPlayer(selectedPlayer?.id === player.id ? null : player)}
-                        className="px-3 py-1 border-4 border-primary bg-primary/20 text-primary font-minecraft text-sm hover:bg-primary hover:text-primary-foreground transition-all"
+                        className={`px-3 py-1 border-4 font-minecraft text-xs transition-all ${
+                          selectedPlayer?.id === player.id 
+                            ? 'border-destructive bg-destructive/20 text-destructive' 
+                            : 'border-primary bg-primary/20 text-primary hover:bg-primary hover:text-primary-foreground'
+                        }`}
                       >
                         {selectedPlayer?.id === player.id ? 'CLOSE' : 'MANAGE'}
                       </button>
@@ -376,88 +404,108 @@ export default function Admin() {
           </div>
 
           {/* Selected Player Panel */}
-          {selectedPlayer && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              className="mt-4 p-4 border-4 border-primary bg-primary/10"
-            >
-              <h3 className="font-pixel text-lg text-foreground mb-4">
-                Managing: {selectedPlayer.username}
-              </h3>
+          <AnimatePresence>
+            {selectedPlayer && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mt-4 overflow-hidden"
+              >
+                <div className="p-4 border-4 border-primary bg-primary/5">
+                  <h3 className="font-pixel text-lg text-foreground mb-4 flex items-center gap-2">
+                    <Gift className="w-5 h-5 text-primary" />
+                    Managing: {selectedPlayer.username}
+                    <span className="text-muted-foreground font-minecraft text-sm ml-2">
+                      (Balance: <span className="text-[hsl(var(--gold))]">{selectedPlayer.balance.toLocaleString()}</span>)
+                    </span>
+                  </h3>
 
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* Give Coins */}
-                <div className="space-y-3">
-                  <h4 className="font-minecraft text-muted-foreground flex items-center gap-2">
-                    <Coins className="w-4 h-4" /> GIVE COINS
-                  </h4>
-                  <div className="flex gap-2">
-                    {[100, 500, 1000, 5000, 10000].map((amount) => (
-                      <button
-                        key={amount}
-                        onClick={() => setGiveAmount(amount)}
-                        className={`px-3 py-1 border-4 font-pixel text-xs transition-all ${
-                          giveAmount === amount
-                            ? 'border-[hsl(var(--gold))] bg-[hsl(var(--gold))]/20 text-[hsl(var(--gold))]'
-                            : 'border-border text-muted-foreground hover:border-[hsl(var(--gold))]/50'
-                        }`}
-                      >
-                        {amount}
-                      </button>
-                    ))}
-                  </div>
-                  <button
-                    onClick={() => giveCoins(selectedPlayer)}
-                    className="w-full py-2 border-4 border-[hsl(var(--gold))] bg-[hsl(var(--gold))]/20 text-[hsl(var(--gold))] font-minecraft hover:bg-[hsl(var(--gold))] hover:text-background transition-all flex items-center justify-center gap-2"
-                  >
-                    <Gift className="w-4 h-4" />
-                    GIVE {giveAmount} COINS
-                  </button>
-                </div>
+                  <div className="grid md:grid-cols-2 gap-6">
+                    {/* Give Coins */}
+                    <div className="space-y-3">
+                      <h4 className="font-minecraft text-muted-foreground flex items-center gap-2 text-sm">
+                        <Coins className="w-4 h-4" /> GIVE COINS
+                      </h4>
+                      
+                      {/* Quick amounts */}
+                      <div className="flex gap-2 flex-wrap">
+                        {[100, 500, 1000, 5000, 10000].map((amount) => (
+                          <button
+                            key={amount}
+                            onClick={() => giveCoins(selectedPlayer, amount)}
+                            className="px-3 py-1 border-4 border-border bg-secondary font-pixel text-xs text-muted-foreground hover:border-[hsl(var(--gold))] hover:text-[hsl(var(--gold))] transition-all"
+                          >
+                            +{amount}
+                          </button>
+                        ))}
+                      </div>
+                      
+                      {/* Custom amount */}
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          value={customAmount}
+                          onChange={(e) => setCustomAmount(e.target.value)}
+                          placeholder="Custom amount..."
+                          className="flex-1 px-3 py-2 bg-secondary border-4 border-border font-minecraft text-foreground focus:border-[hsl(var(--gold))] outline-none text-sm"
+                        />
+                        <button
+                          onClick={() => giveCoins(selectedPlayer, parseInt(customAmount) || 0)}
+                          disabled={!customAmount || parseInt(customAmount) <= 0}
+                          className="px-4 py-2 border-4 border-[hsl(var(--gold))] bg-[hsl(var(--gold))]/20 text-[hsl(var(--gold))] font-minecraft text-sm hover:bg-[hsl(var(--gold))] hover:text-background transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          GIVE
+                        </button>
+                      </div>
+                    </div>
 
-                {/* Give Item */}
-                <div className="space-y-3">
-                  <h4 className="font-minecraft text-muted-foreground flex items-center gap-2">
-                    <Package className="w-4 h-4" /> GIVE ITEM
-                  </h4>
-                  <div className="grid grid-cols-5 gap-2 max-h-32 overflow-y-auto">
-                    {ITEM_POOL.map((item, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => setSelectedItem(item)}
-                        className={`aspect-square border-4 p-1 ${
-                          selectedItem.name === item.name
-                            ? 'border-primary'
-                            : RARITY_COLORS[item.rarity].className
-                        } bg-secondary`}
-                        title={item.name}
-                      >
-                        <div className="w-full h-full" style={{ imageRendering: 'pixelated' }}>
-                          {getTexture(item.texture)}
+                    {/* Give Item */}
+                    <div className="space-y-3">
+                      <h4 className="font-minecraft text-muted-foreground flex items-center gap-2 text-sm">
+                        <Package className="w-4 h-4" /> GIVE ITEM
+                      </h4>
+                      <div className="grid grid-cols-6 gap-2 max-h-28 overflow-y-auto">
+                        {ITEM_POOL.map((item, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => setSelectedItem(item)}
+                            className={`aspect-square border-4 p-1 transition-all ${
+                              selectedItem.name === item.name
+                                ? 'border-primary ring-2 ring-primary'
+                                : RARITY_COLORS[item.rarity].className
+                            } bg-secondary hover:scale-105`}
+                            title={`${item.name} (${item.value} coins)`}
+                          >
+                            <div className="w-full h-full" style={{ imageRendering: 'pixelated' }}>
+                              {getTexture(item.texture)}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className={`font-minecraft ${RARITY_COLORS[selectedItem.rarity].text} text-sm`}>
+                            {selectedItem.name}
+                          </span>
+                          <span className="font-minecraft text-muted-foreground text-xs ml-2">
+                            ({selectedItem.value} coins)
+                          </span>
                         </div>
-                      </button>
-                    ))}
+                        <button
+                          onClick={() => giveItem(selectedPlayer)}
+                          className="px-4 py-2 border-4 border-primary bg-primary/20 text-primary font-minecraft text-sm hover:bg-primary hover:text-primary-foreground transition-all flex items-center gap-2"
+                        >
+                          <Gift className="w-4 h-4" />
+                          GIVE
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-center">
-                    <span className={`font-minecraft ${RARITY_COLORS[selectedItem.rarity].text}`}>
-                      {selectedItem.name}
-                    </span>
-                    <span className="font-minecraft text-muted-foreground ml-2">
-                      ({selectedItem.value} coins)
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => giveItem(selectedPlayer)}
-                    className="w-full py-2 border-4 border-primary bg-primary/20 text-primary font-minecraft hover:bg-primary hover:text-primary-foreground transition-all flex items-center justify-center gap-2"
-                  >
-                    <Gift className="w-4 h-4" />
-                    GIVE ITEM
-                  </button>
                 </div>
-              </div>
-            </motion.div>
-          )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </MainLayout>

@@ -17,20 +17,21 @@ import {
   Menu,
   X,
   Pickaxe,
-  Crown
+  Crown,
+  Sparkles
 } from 'lucide-react';
 
 type TabType = 'profile' | 'wallet' | 'games';
 
 const gameItems = [
-  { path: '/cases', label: 'CRATES', icon: Package, color: 'text-yellow-400' },
-  { path: '/mines', label: 'MINES', icon: Bomb, color: 'text-red-400' },
-  { path: '/upgrader', label: 'UPGRADER', icon: TrendingUp, color: 'text-green-400' },
-  { path: '/inventory', label: 'INVENTORY', icon: Backpack, color: 'text-cyan-400' },
+  { path: '/cases', label: 'CRATES', icon: Package, color: 'text-[hsl(var(--gold))]' },
+  { path: '/mines', label: 'MINES', icon: Bomb, color: 'text-destructive' },
+  { path: '/upgrader', label: 'UPGRADER', icon: TrendingUp, color: 'text-[hsl(var(--emerald))]' },
+  { path: '/inventory', label: 'INVENTORY', icon: Backpack, color: 'text-accent' },
 ];
 
 export function MainLayout({ children }: { children: ReactNode }) {
-  const { balance, profile } = useGame();
+  const { balance, profile, inventory } = useGame();
   const { signOut, user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -65,18 +66,44 @@ export function MainLayout({ children }: { children: ReactNode }) {
             animate={{ opacity: 1, y: 0 }}
             className="space-y-4"
           >
-            <div className="flex items-center gap-4 p-4 bg-card border-4 border-border">
-              <div className="w-16 h-16 bg-primary flex items-center justify-center">
-                <User className="w-10 h-10 text-primary-foreground" />
-              </div>
-              <div>
-                <p className="font-pixel text-lg text-foreground">{profile?.username || 'Player'}</p>
-                <p className="font-minecraft text-sm text-muted-foreground">Level 1 Miner</p>
+            {/* Profile Card */}
+            <div className="relative overflow-hidden p-4 bg-gradient-to-br from-primary/20 to-primary/5 border-4 border-primary/50">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 bg-primary/20 border-4 border-primary flex items-center justify-center">
+                  <User className="w-10 h-10 text-primary" />
+                </div>
+                <div>
+                  <p className="font-pixel text-lg text-foreground">{profile?.username || 'Player'}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className="px-2 py-0.5 bg-accent/20 border border-accent text-accent font-minecraft text-xs">
+                      LVL 1
+                    </div>
+                    {isAdmin && (
+                      <div className="px-2 py-0.5 bg-[hsl(var(--gold))]/20 border border-[hsl(var(--gold))] text-[hsl(var(--gold))] font-minecraft text-xs flex items-center gap-1">
+                        <Crown className="w-3 h-3" /> ADMIN
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
+            
+            {/* Stats */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="p-3 bg-card border-4 border-border text-center">
+                <p className="font-pixel text-lg text-[hsl(var(--gold))]">{balance.toLocaleString()}</p>
+                <p className="font-minecraft text-xs text-muted-foreground">COINS</p>
+              </div>
+              <Link to="/inventory" className="p-3 bg-card border-4 border-border text-center hover:border-primary transition-colors">
+                <p className="font-pixel text-lg text-accent">{inventory?.length || 0}</p>
+                <p className="font-minecraft text-xs text-muted-foreground">ITEMS</p>
+              </Link>
+            </div>
+            
+            {/* Logout */}
             <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-3 p-4 bg-destructive/20 border-4 border-destructive text-destructive font-minecraft hover:bg-destructive hover:text-destructive-foreground transition-all"
+              className="w-full flex items-center gap-3 p-3 bg-destructive/10 border-4 border-destructive/50 text-destructive font-minecraft hover:bg-destructive hover:text-destructive-foreground transition-all"
             >
               <LogOut className="w-5 h-5" />
               LOGOUT
@@ -90,25 +117,31 @@ export function MainLayout({ children }: { children: ReactNode }) {
             animate={{ opacity: 1, y: 0 }}
             className="space-y-4"
           >
-            <div className="p-6 bg-card border-4 border-gold text-center">
-              <Coins className="w-12 h-12 mx-auto mb-3 text-[hsl(var(--gold))]" />
-              <p className="font-minecraft text-sm text-muted-foreground mb-2">YOUR BALANCE</p>
-              <p className="font-pixel text-3xl text-[hsl(var(--gold))]">{balance.toLocaleString()}</p>
-              <p className="font-minecraft text-xs text-muted-foreground mt-2">COINS</p>
+            {/* Balance Card */}
+            <div className="relative overflow-hidden p-6 bg-gradient-to-br from-[hsl(var(--gold))]/20 to-[hsl(var(--gold))]/5 border-4 border-[hsl(var(--gold))]/50 text-center">
+              <div className="absolute top-2 right-2">
+                <Sparkles className="w-5 h-5 text-[hsl(var(--gold))]/50" />
+              </div>
+              <Coins className="w-14 h-14 mx-auto mb-3 text-[hsl(var(--gold))] drop-shadow-lg" />
+              <p className="font-minecraft text-xs text-muted-foreground mb-1">YOUR BALANCE</p>
+              <p className="font-pixel text-4xl text-[hsl(var(--gold))] drop-shadow-lg">{balance.toLocaleString()}</p>
+              <p className="font-minecraft text-xs text-[hsl(var(--gold))]/70 mt-1">COINS</p>
             </div>
+            
+            {/* Quick Actions */}
             <div className="grid grid-cols-2 gap-2">
               <Link
                 to="/inventory"
-                className="p-3 bg-card border-4 border-border text-center font-minecraft text-sm hover:border-primary transition-colors"
+                className="p-3 bg-[hsl(var(--emerald))]/10 border-4 border-[hsl(var(--emerald))]/50 text-center font-minecraft text-sm text-[hsl(var(--emerald))] hover:bg-[hsl(var(--emerald))]/20 transition-colors"
               >
                 SELL ITEMS
               </Link>
-              <button
-                className="p-3 bg-card border-4 border-border text-center font-minecraft text-sm opacity-50 cursor-not-allowed"
-                disabled
+              <Link
+                to="/cases"
+                className="p-3 bg-primary/10 border-4 border-primary/50 text-center font-minecraft text-sm text-primary hover:bg-primary/20 transition-colors"
               >
-                ADD COINS
-              </button>
+                OPEN CRATES
+              </Link>
             </div>
           </motion.div>
         );
@@ -302,25 +335,46 @@ export function MainLayout({ children }: { children: ReactNode }) {
                     )}
                   </div>
                 ) : activeTab === 'wallet' ? (
-                  <div className="p-4 bg-background border-4 border-[hsl(var(--gold))] text-center">
-                    <Coins className="w-10 h-10 mx-auto mb-2 text-[hsl(var(--gold))]" />
-                    <p className="font-pixel text-2xl text-[hsl(var(--gold))]">{balance.toLocaleString()}</p>
-                    <p className="font-minecraft text-xs text-muted-foreground">COINS</p>
+                  <div className="space-y-3">
+                    <div className="p-4 bg-gradient-to-br from-[hsl(var(--gold))]/20 to-[hsl(var(--gold))]/5 border-4 border-[hsl(var(--gold))]/50 text-center">
+                      <Coins className="w-10 h-10 mx-auto mb-2 text-[hsl(var(--gold))]" />
+                      <p className="font-pixel text-3xl text-[hsl(var(--gold))]">{balance.toLocaleString()}</p>
+                      <p className="font-minecraft text-xs text-muted-foreground">COINS</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Link
+                        to="/inventory"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="p-2 bg-[hsl(var(--emerald))]/10 border-4 border-[hsl(var(--emerald))]/50 text-center font-minecraft text-xs text-[hsl(var(--emerald))]"
+                      >
+                        SELL ITEMS
+                      </Link>
+                      <Link
+                        to="/cases"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="p-2 bg-primary/10 border-4 border-primary/50 text-center font-minecraft text-xs text-primary"
+                      >
+                        OPEN CRATES
+                      </Link>
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <div className="flex items-center gap-3 p-3 bg-background border-4 border-border">
-                      <div className="w-12 h-12 bg-primary flex items-center justify-center">
-                        <User className="w-8 h-8 text-primary-foreground" />
+                    <div className="flex items-center gap-3 p-3 bg-gradient-to-br from-primary/20 to-primary/5 border-4 border-primary/50">
+                      <div className="w-12 h-12 bg-primary/20 border-2 border-primary flex items-center justify-center">
+                        <User className="w-8 h-8 text-primary" />
                       </div>
                       <div>
                         <p className="font-pixel text-sm">{profile?.username || 'Player'}</p>
-                        <p className="font-minecraft text-xs text-muted-foreground">Level 1</p>
+                        <div className="flex items-center gap-1 mt-1">
+                          <span className="px-1.5 py-0.5 bg-accent/20 border border-accent text-accent font-minecraft text-[10px]">LVL 1</span>
+                          {isAdmin && <span className="px-1.5 py-0.5 bg-[hsl(var(--gold))]/20 border border-[hsl(var(--gold))] text-[hsl(var(--gold))] font-minecraft text-[10px]">ADMIN</span>}
+                        </div>
                       </div>
                     </div>
                     <button
                       onClick={handleLogout}
-                      className="w-full flex items-center justify-center gap-2 p-3 bg-destructive/20 border-4 border-destructive text-destructive font-minecraft text-sm"
+                      className="w-full flex items-center justify-center gap-2 p-3 bg-destructive/10 border-4 border-destructive/50 text-destructive font-minecraft text-sm"
                     >
                       <LogOut className="w-4 h-4" />
                       LOGOUT

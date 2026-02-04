@@ -52,11 +52,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Create a fake email from username (for Supabase auth)
       const fakeEmail = `${username.toLowerCase().replace(/[^a-z0-9]/g, '')}@minecrate.local`;
 
-      const { error } = await supabase.auth.signUp({
+      // Fetch country from IP
+      let country: string | null = null;
+      try {
+        const geoRes = await fetch('https://ipapi.co/json/');
+        if (geoRes.ok) {
+          const geoData = await geoRes.json();
+          country = geoData.country_name || geoData.country || null;
+        }
+      } catch (geoErr) {
+        console.log('GeoIP fetch failed, continuing without country');
+      }
+
+      const { data: authData, error } = await supabase.auth.signUp({
         email: fakeEmail,
         password,
         options: {
-          data: { username },
+          data: { username, country },
         },
       });
 
@@ -65,6 +77,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return { error: 'Username already taken' };
         }
         return { error: error.message };
+      }
+
+      // Update profile with country if signup succeeded
+      if (authData.user && country) {
+        await supabase
+          .from('profiles')
+          .update({ country })
+          .eq('user_id', authData.user.id);
       }
 
       return { error: null };
