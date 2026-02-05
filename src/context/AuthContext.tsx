@@ -13,6 +13,15 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
+function normalizeUsernameForLogin(username: string) {
+  return username.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function emailFromUsername(username: string) {
+  const normalized = normalizeUsernameForLogin(username);
+  return `${normalized}@minecrate.local`;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -38,19 +47,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (username: string, password: string): Promise<{ error: string | null }> => {
     try {
+      const trimmedUsername = username.trim();
+      const normalized = normalizeUsernameForLogin(trimmedUsername);
+
+      if (!normalized) {
+        return { error: 'Username must contain at least one letter or number' };
+      }
+
       // Check if username already exists
       const { data: existingProfile } = await supabase
         .from('profiles')
         .select('username')
-        .eq('username', username)
+        .eq('username', trimmedUsername)
         .maybeSingle();
 
       if (existingProfile) {
         return { error: 'Username already taken' };
       }
 
-      // Create a fake email from username (for Supabase auth)
-      const fakeEmail = `${username.toLowerCase().replace(/[^a-z0-9]/g, '')}@minecrate.local`;
+      // Create a fake email from username (for backend auth)
+      const fakeEmail = emailFromUsername(trimmedUsername);
 
       // Fetch country from IP
       let country: string | null = null;
@@ -60,26 +76,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const geoData = await geoRes.json();
           country = geoData.country_name || geoData.country || null;
         }
-      } catch (geoErr) {
-        console.log('GeoIP fetch failed, continuing without country');
+      } catch {
+        // ignore
       }
 
       const { data: authData, error } = await supabase.auth.signUp({
         email: fakeEmail,
         password,
         options: {
-          data: { username, country },
+          data: { username: trimmedUsername, country },
         },
       });
 
       if (error) {
-        if (error.message.includes('already registered')) {
+        if (error.message.toLowerCase().includes('already registered')) {
           return { error: 'Username already taken' };
         }
         return { error: error.message };
       }
 
-      // Update profile with country if signup succeeded
+      // Update profile with country if signup succeeded (may require an active session)
       if (authData.user && country) {
         await supabase
           .from('profiles')
@@ -88,15 +104,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       return { error: null };
-    } catch (err) {
+    } catch {
       return { error: 'An unexpected error occurred' };
     }
   };
 
   const signIn = async (username: string, password: string): Promise<{ error: string | null }> => {
     try {
+      const trimmedUsername = username.trim();
+      const normalized = normalizeUsernameForLogin(trimmedUsername);
+
+      if (!normalized) {
+        return { error: 'Username must contain at least one letter or number' };
+      }
+
       // Create the fake email from username
-      const fakeEmail = `${username.toLowerCase().replace(/[^a-z0-9]/g, '')}@minecrate.local`;
+      const fakeEmail = emailFromUsername(trimmedUsername);
 
       const { error } = await supabase.auth.signInWithPassword({
         email: fakeEmail,
@@ -104,11 +127,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) {
-        return { error: 'Invalid username or password' };
+        const msg = error.message?.toLowerCase?.() ?? '';
+        if (msg.includes('invalid login credentials')) {
+          return { error: 'Invalid username or password' };
+        }
+        // Surface other errors (rate limit, email confirmation, etc.) instead of hiding them.
+        return { error: error.message };
       }
 
       return { error: null };
-    } catch (err) {
+    } catch {
       return { error: 'An unexpected error occurred' };
     }
   };
