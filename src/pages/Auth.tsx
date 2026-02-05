@@ -37,7 +37,7 @@ export default function Auth() {
         return;
       }
 
-      const { error } = await signUp(username, password);
+      const { error } = await signUp(username.trim(), password);
       if (error) {
         toast.error(error);
       } else {
@@ -48,7 +48,7 @@ export default function Auth() {
       }
     } else {
       // Login
-      const { error } = await signIn(username, password);
+      const { error } = await signIn(username.trim(), password);
       if (error) {
         toast.error(error);
       } else {

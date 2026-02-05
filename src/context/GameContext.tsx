@@ -94,13 +94,18 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const updateBalance = async (newBalance: number) => {
     if (!user) return;
-    
+
     setBalance(newBalance);
-    
-    await supabase
+    setProfile((prev) => (prev ? { ...prev, balance: newBalance } : prev));
+
+    const { error } = await supabase
       .from('profiles')
       .update({ balance: newBalance })
       .eq('user_id', user.id);
+
+    if (error) {
+      console.error('Error updating balance:', error);
+    }
   };
 
   const addBalance = (amount: number) => {
@@ -118,29 +123,51 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const addItem = async (item: GameItem) => {
     if (!user) return;
 
-    const newItem = { ...item, id: `${item.id}-${Date.now()}` };
-    setInventory(prev => [...prev, newItem]);
+    const tempId = `temp-${crypto.randomUUID()}`;
+    const optimisticItem: GameItem = { ...item, id: tempId };
 
-    await supabase.from('inventory').insert({
-      id: newItem.id,
-      user_id: user.id,
-      item_name: item.name,
-      item_rarity: item.rarity,
-      item_value: item.value,
-      item_texture: item.texture,
-      item_type: item.type,
-    });
+    setInventory((prev) => [...prev, optimisticItem]);
+
+    const { data, error } = await supabase
+      .from('inventory')
+      .insert({
+        user_id: user.id,
+        item_name: item.name,
+        item_rarity: item.rarity,
+        item_value: item.value,
+        item_texture: item.texture,
+        item_type: item.type,
+      })
+      .select('id')
+      .single();
+
+    if (error || !data?.id) {
+      console.error('Error saving inventory item:', error);
+      // rollback optimistic add
+      setInventory((prev) => prev.filter((i) => i.id !== tempId));
+      return;
+    }
+
+    // Replace temp id with real UUID from the database
+    setInventory((prev) => prev.map((i) => (i.id === tempId ? { ...i, id: data.id } : i)));
   };
 
   const removeItem = async (itemId: string) => {
     if (!user) return;
 
-    setInventory(prev => prev.filter(item => item.id !== itemId));
+    setInventory((prev) => prev.filter((item) => item.id !== itemId));
 
-    await supabase
+    const { error } = await supabase
       .from('inventory')
       .delete()
-      .eq('id', itemId);
+      .eq('id', itemId)
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('Error removing inventory item:', error);
+      // Best-effort reload to resync
+      loadUserData();
+    }
   };
 
   const sellItem = (itemId: string) => {
