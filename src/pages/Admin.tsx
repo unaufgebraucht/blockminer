@@ -185,22 +185,19 @@ export default function Admin() {
     ));
 
     try {
-      const itemId = `admin-${Date.now()}`;
-      
-      await supabase.from('inventory').insert({
-        id: itemId,
+      const { data: insertedItem } = await supabase.from('inventory').insert({
         user_id: player.user_id,
         item_name: selectedItem.name,
         item_rarity: selectedItem.rarity,
         item_value: selectedItem.value,
         item_texture: selectedItem.texture,
         item_type: selectedItem.type,
-      });
+      }).select('id').single();
 
       await supabase.from('transactions').insert({
         user_id: player.user_id,
         type: 'admin_item_grant',
-        item_id: itemId,
+        item_id: insertedItem?.id || null,
         item_name: selectedItem.name,
         admin_id: user.id,
       });
