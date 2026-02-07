@@ -115,7 +115,7 @@ export default function Cases() {
 
     // Animate the spinner
     const itemWidth = 120;
-    const targetOffset = (winningPosition * itemWidth) - (window.innerWidth / 2) + (itemWidth / 2);
+    const targetOffset = winningPosition * itemWidth;
     const duration = 4000;
     const startTime = Date.now();
     let lastTickTime = 0;

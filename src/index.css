@@ -8,12 +8,12 @@
 
 @layer base {
   :root {
-    /* Core Minecraft palette */
-    --background: 220 20% 8%;
-    --foreground: 45 20% 95%;
+    /* Core dark palette with depth */
+    --background: 225 20% 7%;
+    --foreground: 40 15% 93%;
 
-    --card: 220 15% 12%;
-    --card-foreground: 45 20% 95%;
+    --card: 225 18% 10%;
+    --card-foreground: 40 15% 93%;
 
     --popover: 220 15% 12%;
     --popover-foreground: 45 20% 95%;
