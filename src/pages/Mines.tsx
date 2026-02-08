@@ -3,12 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MainLayout } from '@/components/MainLayout';
 import { getTexture } from '@/components/MinecraftTextures';
 import { useGame } from '@/context/GameContext';
-import { Bomb, RotateCcw } from 'lucide-react';
+import { Bomb, RotateCcw, Coins, Minus, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
 
 const GRID_SIZE = 5;
-const BET_OPTIONS = [10, 25, 50, 100, 250, 500];
+const BET_PRESETS = [10, 25, 50, 100, 250, 500];
 const MINE_OPTIONS = [1, 3, 5, 10, 15, 20];
 
 interface Tile {
@@ -20,6 +20,7 @@ interface Tile {
 export default function Mines() {
   const { balance, addBalance, removeBalance } = useGame();
   const [betAmount, setBetAmount] = useState(50);
+  const [customBet, setCustomBet] = useState('');
   const [mineCount, setMineCount] = useState(3);
   const [isPlaying, setIsPlaying] = useState(false);
   const [grid, setGrid] = useState<Tile[][]>([]);
@@ -27,6 +28,7 @@ export default function Mines() {
   const [currentMultiplier, setCurrentMultiplier] = useState(1);
   const [gameOver, setGameOver] = useState(false);
   const [won, setWon] = useState(false);
+  const { playClick } = useSoundEffects();
 
   const calculateMultiplier = useCallback((revealed: number, mines: number) => {
     const safeSpots = GRID_SIZE * GRID_SIZE - mines;
@@ -37,15 +39,29 @@ export default function Mines() {
     return Math.min(multiplier * 0.97, 1000);
   }, []);
 
+  const handleCustomBetChange = (value: string) => {
+    const num = value.replace(/[^0-9]/g, '');
+    setCustomBet(num);
+    const parsed = parseInt(num);
+    if (parsed > 0) {
+      setBetAmount(Math.min(parsed, balance));
+    }
+  };
+
+  const adjustBet = (direction: 'half' | 'double' | 'max') => {
+    playClick();
+    if (direction === 'half') setBetAmount(Math.max(1, Math.floor(betAmount / 2)));
+    else if (direction === 'double') setBetAmount(Math.min(balance, betAmount * 2));
+    else setBetAmount(balance);
+  };
+
   const startGame = () => {
     if (balance < betAmount) {
       toast.error("Not enough coins!");
       return;
     }
 
-    if (!removeBalance(betAmount)) {
-      return;
-    }
+    if (!removeBalance(betAmount)) return;
 
     const newGrid: Tile[][] = Array(GRID_SIZE).fill(null).map(() =>
       Array(GRID_SIZE).fill(null).map(() => ({
@@ -124,36 +140,57 @@ export default function Mines() {
   return (
     <MainLayout>
       <div className="max-w-4xl mx-auto">
-        <h1 className="font-pixel text-2xl md:text-3xl text-foreground mb-8 flex items-center gap-3">
+        <motion.h1
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="font-pixel text-xl md:text-2xl text-foreground mb-6 flex items-center gap-3"
+        >
           <Bomb className="text-destructive" />
           MINES
-        </h1>
+        </motion.h1>
 
-        <div className="grid md:grid-cols-[1fr,300px] gap-6">
+        <div className="grid md:grid-cols-[1fr,280px] gap-4">
           {/* Game Grid */}
-          <div className="bg-card border-4 border-border p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="game-card p-4"
+          >
             {!isPlaying && grid.length === 0 ? (
               <div className="aspect-square flex items-center justify-center">
-                <p className="font-minecraft text-muted-foreground text-center">
-                  Set your bet and mines,<br />then click START
-                </p>
+                <div className="text-center">
+                  <motion.div
+                    animate={{ y: [0, -8, 0] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="w-16 h-16 mx-auto mb-4"
+                    style={{ imageRendering: 'pixelated' }}
+                  >
+                    {getTexture('tnt')}
+                  </motion.div>
+                  <p className="font-minecraft text-muted-foreground text-sm">
+                    Set your bet and mines,<br />then click START
+                  </p>
+                </div>
               </div>
             ) : (
-              <div className="grid grid-cols-5 gap-2">
+              <div className="grid grid-cols-5 gap-1.5">
                 {grid.map((row, rowIndex) =>
                   row.map((tile, colIndex) => (
                     <motion.button
                       key={`${rowIndex}-${colIndex}`}
                       onClick={() => revealTile(rowIndex, colIndex)}
                       disabled={!isPlaying || tile.revealed || gameOver}
-                      whileHover={!tile.revealed && isPlaying ? { scale: 1.05 } : {}}
-                      whileTap={!tile.revealed && isPlaying ? { scale: 0.95 } : {}}
-                      className={`aspect-square border-4 transition-all ${
+                      whileHover={!tile.revealed && isPlaying ? { scale: 1.08, y: -2 } : {}}
+                      whileTap={!tile.revealed && isPlaying ? { scale: 0.92 } : {}}
+                      initial={{ opacity: 0, scale: 0.5 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: (rowIndex * 5 + colIndex) * 0.02 }}
+                      className={`aspect-square border-2 transition-all ${
                         tile.revealed
                           ? tile.isMine
-                            ? 'border-destructive bg-destructive/20'
-                            : 'border-primary bg-primary/20'
-                          : 'border-border bg-muted hover:border-primary/50 cursor-pointer'
+                            ? 'border-destructive bg-destructive/20 glow-red'
+                            : 'border-emerald bg-emerald/10'
+                          : 'border-border bg-muted hover:border-accent/50 hover:bg-muted/80 cursor-pointer'
                       }`}
                     >
                       <AnimatePresence>
@@ -161,6 +198,7 @@ export default function Mines() {
                           <motion.div
                             initial={{ scale: 0, rotateY: 180 }}
                             animate={{ scale: 1, rotateY: 0 }}
+                            transition={{ type: 'spring', damping: 12 }}
                             className="w-full h-full p-1"
                             style={{ imageRendering: 'pixelated' }}
                           >
@@ -170,7 +208,7 @@ export default function Mines() {
                       </AnimatePresence>
                       {!tile.revealed && (
                         <div className="w-full h-full flex items-center justify-center">
-                          <span className="text-2xl">❓</span>
+                          <div className="w-3 h-3 bg-muted-foreground/20 rounded-sm" />
                         </div>
                       )}
                     </motion.button>
@@ -181,44 +219,118 @@ export default function Mines() {
 
             {(gameOver || won) && (
               <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
                 className="mt-4 text-center"
               >
-                <p className={`font-pixel text-2xl ${gameOver ? 'text-destructive' : 'text-primary'}`}>
+                <motion.p 
+                  className={`font-pixel text-xl ${gameOver ? 'text-destructive' : 'text-emerald'}`}
+                  animate={gameOver ? { x: [0, -5, 5, -3, 3, 0] } : { scale: [1, 1.1, 1] }}
+                  transition={{ duration: 0.5 }}
+                >
                   {gameOver ? 'GAME OVER!' : 'YOU WON!'}
-                </p>
+                </motion.p>
                 {won && (
-                  <p className="font-minecraft text-[hsl(var(--gold))] mt-2">
+                  <motion.p 
+                    className="font-minecraft text-gold mt-1"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                  >
                     +{Math.floor(betAmount * currentMultiplier)} coins
-                  </p>
+                  </motion.p>
                 )}
                 <button
                   onClick={resetGame}
-                  className="mt-4 px-6 py-2 bg-muted border-4 border-primary text-foreground font-minecraft hover:bg-primary hover:text-primary-foreground transition-all"
+                  className="mt-3 px-5 py-2 border-2 border-accent text-accent font-minecraft hover:bg-accent/10 transition-all inline-flex items-center gap-2"
                 >
-                  <RotateCcw className="inline-block mr-2 w-4 h-4" />
+                  <RotateCcw className="w-4 h-4" />
                   PLAY AGAIN
                 </button>
               </motion.div>
             )}
-          </div>
+          </motion.div>
 
           {/* Controls */}
-          <div className="bg-card border-4 border-border p-4 space-y-6">
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="game-card p-4 space-y-4"
+          >
+            {/* Bet Amount */}
             <div>
-              <label className="font-minecraft text-muted-foreground text-sm block mb-2">BET AMOUNT</label>
-              <div className="grid grid-cols-3 gap-2">
-                {BET_OPTIONS.map((amount) => (
+              <label className="font-minecraft text-muted-foreground text-xs block mb-2">BET AMOUNT</label>
+              
+              {/* Custom input */}
+              <div className="flex items-center gap-1 mb-2">
+                <button
+                  onClick={() => { playClick(); setBetAmount(Math.max(1, betAmount - 10)); }}
+                  disabled={isPlaying}
+                  className="p-1.5 border-2 border-border hover:border-accent transition-all disabled:opacity-40"
+                >
+                  <Minus className="w-3 h-3 text-muted-foreground" />
+                </button>
+                <div className="flex-1 relative">
+                  <Coins className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gold" />
+                  <input
+                    type="text"
+                    value={customBet || betAmount}
+                    onChange={(e) => handleCustomBetChange(e.target.value)}
+                    onBlur={() => {
+                      const parsed = parseInt(customBet);
+                      if (parsed > 0) setBetAmount(Math.min(parsed, balance));
+                      setCustomBet('');
+                    }}
+                    onFocus={() => setCustomBet(String(betAmount))}
+                    disabled={isPlaying}
+                    className="w-full bg-muted border-2 border-border text-center font-pixel text-sm text-gold py-1.5 pl-6 focus:border-accent outline-none transition-all disabled:opacity-40"
+                  />
+                </div>
+                <button
+                  onClick={() => { playClick(); setBetAmount(Math.min(balance, betAmount + 10)); }}
+                  disabled={isPlaying}
+                  className="p-1.5 border-2 border-border hover:border-accent transition-all disabled:opacity-40"
+                >
+                  <Plus className="w-3 h-3 text-muted-foreground" />
+                </button>
+              </div>
+
+              {/* Quick adjust */}
+              <div className="flex gap-1 mb-2">
+                <button
+                  onClick={() => adjustBet('half')}
+                  disabled={isPlaying}
+                  className="flex-1 py-1 border border-border font-minecraft text-[10px] text-muted-foreground hover:border-accent hover:text-accent transition-all disabled:opacity-40"
+                >
+                  ½
+                </button>
+                <button
+                  onClick={() => adjustBet('double')}
+                  disabled={isPlaying}
+                  className="flex-1 py-1 border border-border font-minecraft text-[10px] text-muted-foreground hover:border-accent hover:text-accent transition-all disabled:opacity-40"
+                >
+                  2×
+                </button>
+                <button
+                  onClick={() => adjustBet('max')}
+                  disabled={isPlaying}
+                  className="flex-1 py-1 border border-border font-minecraft text-[10px] text-muted-foreground hover:border-gold hover:text-gold transition-all disabled:opacity-40"
+                >
+                  MAX
+                </button>
+              </div>
+
+              {/* Presets */}
+              <div className="grid grid-cols-3 gap-1">
+                {BET_PRESETS.map((amount) => (
                   <button
                     key={amount}
-                    onClick={() => setBetAmount(amount)}
+                    onClick={() => { playClick(); setBetAmount(amount); }}
                     disabled={isPlaying}
-                    className={`p-2 border-4 font-minecraft text-sm transition-all ${
+                    className={`p-1.5 border font-minecraft text-xs transition-all ${
                       betAmount === amount
-                        ? 'border-[hsl(var(--gold))] bg-[hsl(var(--gold))]/20 text-[hsl(var(--gold))]'
-                        : 'border-border text-muted-foreground hover:border-[hsl(var(--gold))]/50'
-                    } ${isPlaying ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        ? 'border-gold bg-gold/10 text-gold'
+                        : 'border-border text-muted-foreground hover:border-gold/50'
+                    } ${isPlaying ? 'opacity-40' : ''}`}
                   >
                     {amount}
                   </button>
@@ -226,19 +338,22 @@ export default function Mines() {
               </div>
             </div>
 
+            {/* Bombs */}
             <div>
-              <label className="font-minecraft text-muted-foreground text-sm block mb-2">BOMBS</label>
-              <div className="grid grid-cols-3 gap-2">
+              <label className="font-minecraft text-muted-foreground text-xs block mb-2">
+                BOMBS <span className="text-destructive">({mineCount})</span>
+              </label>
+              <div className="grid grid-cols-3 gap-1">
                 {MINE_OPTIONS.map((count) => (
                   <button
                     key={count}
-                    onClick={() => setMineCount(count)}
+                    onClick={() => { playClick(); setMineCount(count); }}
                     disabled={isPlaying}
-                    className={`p-2 border-4 font-minecraft text-sm transition-all ${
+                    className={`p-1.5 border font-minecraft text-xs transition-all ${
                       mineCount === count
-                        ? 'border-destructive bg-destructive/20 text-destructive'
+                        ? 'border-destructive bg-destructive/15 text-destructive'
                         : 'border-border text-muted-foreground hover:border-destructive/50'
-                    } ${isPlaying ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    } ${isPlaying ? 'opacity-40' : ''}`}
                   >
                     {count}
                   </button>
@@ -246,51 +361,56 @@ export default function Mines() {
               </div>
             </div>
 
+            {/* Multiplier display */}
             {isPlaying && (
-              <div className="text-center p-4 border-4 border-primary bg-primary/10">
-                <p className="font-minecraft text-muted-foreground text-sm">MULTIPLIER</p>
-                <p className="font-pixel text-2xl text-primary">{currentMultiplier.toFixed(2)}x</p>
-                <p className="font-minecraft text-[hsl(var(--gold))] text-sm mt-1">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="text-center p-3 border-2 border-accent bg-accent/5"
+              >
+                <p className="font-minecraft text-muted-foreground text-[10px]">MULTIPLIER</p>
+                <p className="font-pixel text-xl text-accent">{currentMultiplier.toFixed(2)}x</p>
+                <p className="font-minecraft text-gold text-xs mt-0.5">
                   {Math.floor(betAmount * currentMultiplier)} coins
                 </p>
-              </div>
+              </motion.div>
             )}
 
+            {/* Action Button */}
             {!isPlaying ? (
               <motion.button
                 onClick={startGame}
                 disabled={balance < betAmount}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className={`w-full py-4 border-4 font-pixel text-lg transition-all ${
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                className={`w-full py-3 border-2 font-pixel text-sm transition-all ${
                   balance >= betAmount
-                    ? 'bg-primary border-primary text-primary-foreground hover:shadow-[4px_4px_0px_rgba(0,0,0,0.3)]'
+                    ? 'bg-accent/20 border-accent text-accent hover:bg-accent/30 glow-diamond'
                     : 'bg-muted border-border text-muted-foreground cursor-not-allowed'
                 }`}
               >
-                START GAME
+                START ({betAmount} <Coins className="inline w-3 h-3" />)
               </motion.button>
             ) : (
               <motion.button
                 onClick={cashOut}
                 disabled={revealedCount === 0}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className={`w-full py-4 border-4 font-pixel text-lg transition-all ${
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                className={`w-full py-3 border-2 font-pixel text-sm transition-all ${
                   revealedCount > 0
-                    ? 'bg-[hsl(var(--gold))] border-[hsl(var(--gold))] text-background hover:shadow-[4px_4px_0px_rgba(0,0,0,0.3)]'
+                    ? 'bg-gold/20 border-gold text-gold hover:bg-gold/30 glow-gold'
                     : 'bg-muted border-border text-muted-foreground cursor-not-allowed'
                 }`}
               >
-                CASH OUT
+                CASH OUT ({Math.floor(betAmount * currentMultiplier)})
               </motion.button>
             )}
 
-            <div className="text-center font-minecraft text-muted-foreground text-xs">
-              <p>Avoid the bombs!</p>
-              <p>Diamonds & Emeralds = Safe</p>
-            </div>
-          </div>
+            <p className="font-minecraft text-muted-foreground/50 text-[9px] text-center">
+              Avoid the bombs • Find the gems
+            </p>
+          </motion.div>
         </div>
       </div>
     </MainLayout>
