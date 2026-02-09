@@ -46,10 +46,10 @@ export default function Upgrader() {
       targetAngle = winZoneDeg + Math.random() * redZone * 0.9 + redZone * 0.05;
     }
     
-    const finalRotation = (baseRotations * 360) + targetAngle;
+    const startAngle = needleAngle % 360;
+    const finalRotation = (baseRotations * 360) + targetAngle - startAngle;
     const duration = 5000;
     const startTime = Date.now();
-    const startAngle = needleAngle % 360;
 
     const animate = () => {
       const elapsed = Date.now() - startTime;
