@@ -31,10 +31,11 @@ export default function Mines() {
   const { playClick } = useSoundEffects();
 
   const calculateMultiplier = useCallback((revealed: number, mines: number) => {
-    const safeSpots = GRID_SIZE * GRID_SIZE - mines;
+    const totalSpots = GRID_SIZE * GRID_SIZE;
+    const safeSpots = totalSpots - mines;
     let multiplier = 1;
     for (let i = 0; i < revealed; i++) {
-      multiplier *= safeSpots / (safeSpots - i);
+      multiplier *= (totalSpots - i) / (safeSpots - i);
     }
     return Math.min(multiplier * 0.97, 1000);
   }, []);
